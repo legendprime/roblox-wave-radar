@@ -1,5 +1,5 @@
 # Ledger: Roblox Trend Tracker
-_Updated 2026-11-08 06:25 by Claude Code (Opus 5.5)_ · **Status:** idle
+_Updated 2026-11-08 06:50 by Claude Code (Opus 5.5)_ · **Status:** idle
 
 ## Goal
 Wave radar (2026-11-08): spot Roblox waves as they start (Just starting → Jump in now → Crowded → Fading) and show opportunities on a dashboard, running on GitHub Actions (user chose GitHub; nothing runs on their Mac).
@@ -33,7 +33,8 @@ Original goal: Collect daily data on Roblox games (charts + lineage-style search
 - Fix: search rotation (hot-wave words first, fixed list continues via meta.search_cursor), phone-only charts, 2 pages; alert gate (>=3 checks, >=3000 games, stage held 2 checks; schema v3 wave_state.stage_runs); dashboard notes search coverage. Cloud DB seeded with local full-search data (4,774 games, runs 1-2) on the radar branch.
 - Third cloud run (42474861557) OK: 44/44 searches in 41s (throttling varies by runner IP), 4,436 games snapshot, 220 new, no alerts (gate working), dashboard live at github.com/legendprime/roblox-wave-radar/tree/radar. Jump in now: ragdoll, malam.
 - Website (user asked for an app, chose a self-updating public website): tracker/site.py builds site/index.html (data inlined, no external libs) each run; workflow deploys it with GitHub Pages (upload-pages-artifact@v3 + deploy-pages@v4, environment github-pages). Repo must go public on free GitHub (user accepted); commit email legendprim3@gmail.com is already public via their demoapp repo.
-- Now: make repo public, enable Pages (build_type=workflow), run, verify https://legendprime.github.io/roblox-wave-radar/.
+- Done: repo made public (gh repo edit --accept-visibility-change-consequences; gg visibility lacks that flag), Pages enabled (build_type=workflow). Run 42475925907 published the site; checked in the browser pane: tabs, cards, icons, expand list, lone breakouts, search filter, no console errors.
+- Now: nothing running locally; the cloud radar + website rebuild every 3h at :17 UTC.
 - Next: watch the first day of cloud runs (growth/trend numbers appear after ~24h); tune [radar] thresholds if stages look off; user may want concept ideas for an open wave.
 
 ## In flight
@@ -43,6 +44,7 @@ Original goal: Collect daily data on Roblox games (charts + lineage-style search
 - none
 
 ## Log
+- 2026-11-08 06:50 Claude Code: website live at legendprime.github.io/roblox-wave-radar, verified.
 - 2026-11-08 06:30 Claude Code: interactive website + Pages deploy step.
 - 2026-11-08 06:25 Claude Code: third cloud run verified; radar live.
 - 2026-11-08 06:20 Claude Code: search rotation + alert gate; seeded cloud DB; closed 4 wrong alerts.
