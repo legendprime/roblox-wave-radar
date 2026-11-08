@@ -81,6 +81,9 @@ def run_collect(conn, cfg, api, log=print):
                          " VALUES (?,?,'watchlist')", (uid, ts))
             new_ids.append(uid)
 
+    # Commit before the slow network phase so no write transaction is held while waiting on Roblox.
+    conn.commit()
+
     # 4. Decide what to refresh ------------------------------------------
     cutoff = iso(started - dt.timedelta(days=c["keep_new_days"]))
     refresh = set(seen) | set(watch)

@@ -182,10 +182,12 @@ def connect(path=DB_PATH):
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(path, timeout=30)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    conn.executescript(SCHEMA)
-    conn.execute("INSERT OR IGNORE INTO meta (key, value) VALUES ('schema_version', ?)",
-                 (str(SCHEMA_VERSION),))
-    conn.commit()
+    # Opening must not write when the schema is current, or read-only commands
+    # (status, game, report) would wait on a collection that is writing.
+    if conn.execute("PRAGMA journal_mode").fetchone()[0].lower() != "wal":
+        conn.execute("PRAGMA journal_mode=WAL")
+    if conn.execute("PRAGMA user_version").fetchone()[0] < SCHEMA_VERSION:
+        conn.executescript(SCHEMA)
+        conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+        conn.commit()
     return conn

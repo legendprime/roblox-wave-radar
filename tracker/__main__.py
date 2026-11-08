@@ -58,6 +58,9 @@ def resolve(conn, text, api=None):
 
 def cmd_run(args, conn, cfg):
     with RunLock():
+        # Holding the lock means no other run is active: anything still marked running was cut off.
+        conn.execute("UPDATE runs SET status = 'abandoned' WHERE status = 'running'")
+        conn.commit()
         t0 = time.monotonic()
         api = api_mod.Api(log=log)
         try:
