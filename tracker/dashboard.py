@@ -46,7 +46,11 @@ class Page:
         lines = [f"### {w['label']}",
                  f"{hit} · {w['n']} games · {w['n7']} new this week, {w['n14']} in two weeks · "
                  f"{compact(w['total'])} playing {w['spark']} · 3-day trend {growth(w['growth_72h'])}",
-                 "",
+                 ""]
+        if w.get("parent"):
+            lines += [f"> A hot pocket inside the bigger **{w['parent']}** wave, which is past its window. "
+                      f"This corner of it is still open.", ""]
+        lines += [
                  f"- **Leader:** {self.link(w['leader'], icon=True)} · {compact(w['leader_playing'])} playing · "
                  f"{fmt_days(w['leader_age'])} old · 24h {growth(w['leader_growth_24h'])}"]
         if w["best"]:
@@ -106,7 +110,9 @@ class Page:
             out.append("_None right now._")
         out.append("")
 
-        crowded = [w for w in by["crowded"] if w["total"] >= r["show_crowded_min_total"]]
+        crowded = sorted([w for w in by["crowded"] if w["total"] >= r["show_crowded_min_total"]
+                          and (w["leader_age"] or 0) <= r["show_crowded_max_leader_age"]],
+                         key=lambda w: w["total"], reverse=True)[:r["show_crowded_rows"]]
         out += [f"## {STAGE_TITLE['crowded']}", "",
                 "_The wave is real but the window has closed: lots of copies, copies mostly failing, or an old "
                 "leader. Only a big change (new theme + reworked loop) has a shot here._", ""]

@@ -29,7 +29,7 @@ when where this that all one two can will make together
 """.split())
 GENERIC = set("""
 simulator sim tycoon obby game games roblox rp roleplay experience place hub lobby server servers
-private public world worlds
+private public world worlds battle
 """.split())
 
 BRACKETS = re.compile(r"[\[\(\{【「].*?[\]\)\}】」]")
@@ -184,21 +184,49 @@ class Radar:
                     young_term[x].add(uid)
         self.surface, self.young_term, self.all_term = surface, young_term, all_term
 
-        cands = [x for x, ys in young_term.items()
-                 if len(ys) >= r["min_games"] and len(ys) / len(all_term[x]) >= r["min_novelty"]]
+        # A word is "new" if most of the games using it that still have players are young.
+        # Dead old games don't count, so a revived theme (ragdoll in 2020 and again now) still shows up.
+        def novelty(x):
+            old_active = sum(1 for u in all_term[x] - young_term[x]
+                             if (self.games[u]["last_playing"] or 0) >= r["novelty_old_min_playing"])
+            return len(young_term[x]) / (len(young_term[x]) + old_active)
+        self.novelty = novelty
+        cands = [x for x, ys in young_term.items() if len(ys) >= r["min_games"] and novelty(x) >= r["min_novelty"]]
         cands.sort(key=lambda x: (-len(young_term[x]), " " in x, x))
+        # Group terms. A term mostly inside an existing group joins it when it's a word pair
+        # ("ragdoll physics" -> ragdoll) or a similar size. A much smaller pocket inside a big
+        # group ("evolution" inside "+1") stays separate as a child, and is only shown if it's
+        # hotter than its parent, which is exactly the kind of opening worth seeing.
         groups = []
         for x in cands:
             ys = young_term[x]
+            merged, parent = False, None
             for grp in groups:
-                if len(ys & grp["members"]) / min(len(ys), len(grp["members"])) >= r["merge_containment"]:
+                inter = len(ys & grp["members"])
+                contained = inter / min(len(ys), len(grp["members"])) >= r["merge_containment"]
+                same_games = inter / len(ys | grp["members"]) >= r["merge_jaccard"]
+                if (contained and " " in x) or same_games:
                     grp["terms"].append(x)
                     grp["members"] |= ys
+                    merged = True
                     break
-            else:
-                groups.append({"terms": [x], "members": set(ys)})
+                if contained:
+                    parent = parent or grp
+            if not merged:
+                groups.append({"terms": [x], "members": set(ys), "parent": parent})
 
-        waves = [self._measure(grp) for grp in groups]
+        measured = {id(grp): self._measure(grp) for grp in groups}
+        waves = []
+        for grp in groups:
+            w = measured[id(grp)]
+            if grp["parent"] is not None:
+                pw = measured[id(grp["parent"])]
+                w["parent"] = pw["label"]
+                if not (w["stage"] in ("jump", "starting") and pw["stage"] not in ("jump", "starting")):
+                    if w["label"] not in pw["terms"]:
+                        pw["terms"].append(w["label"])   # still listed, just not as its own wave
+                    continue  # says nothing its parent doesn't
+            waves.append(w)
         order = {s: i for i, s in enumerate(STAGES)}
         waves.sort(key=lambda w: (order[w["stage"]], -w["score"]))
         self.waves = waves
@@ -220,6 +248,8 @@ class Radar:
         followers = [u for u in members if u != leader]
         eligible = [u for u in followers if (self.age(u) or 0) >= 3]
         hits = [u for u in eligible if (self.games[u]["peak_playing"] or 0) >= 1000]
+        recent = [u for u in eligible if (self.age(u) or 99) <= 17]
+        recent_hits = [u for u in recent if (self.games[u]["peak_playing"] or 0) >= 1000]
         hits10 = [u for u in eligible if (self.games[u]["peak_playing"] or 0) >= 10000]
         n7 = sum(1 for u in members if (self.age(u) or 99) <= 7)
         n14 = sum(1 for u in members if (self.age(u) or 99) <= 14)
@@ -239,6 +269,8 @@ class Radar:
             "leader_growth_24h": self.growth([leader], 24), "leader_growth_72h": self.growth([leader], 72),
             "eligible": len(eligible), "hits": len(hits), "hits10": len(hits10),
             "hit_rate": (len(hits) / len(eligible)) if eligible else None,
+            "recent": len(recent), "recent_hits": len(recent_hits),
+            "recent_hit_rate": (len(recent_hits) / len(recent)) if recent else None,
             "total": total,
             "growth_24h": self.growth(everyone, 24), "growth_72h": self.growth(everyone, 72),
             "growth_7d": self.growth(everyone, 168),
@@ -248,6 +280,7 @@ class Radar:
             "newest": sorted([u for u in members if (self.age(u) or 99) <= 7], key=self.playing, reverse=True)[:3],
             "genre": genres.most_common(1)[0][0] if genres else "unknown",
             "lineage": lineage,
+            "parent": None,
         }
         m["stage"], m["why"] = self._stage(m)
         # Rank within a stage: successful copies, fresh leader, growing.
@@ -261,10 +294,13 @@ class Radar:
         g7, g3 = m["growth_7d"], m["growth_72h"]
         if g7 is not None and g7 < r["fading_7d"]:
             return "fading", f"players down {100 - g7 * 100:.0f}% in a week"
-        if m["n"] >= r["crowded_games"]:
-            return "crowded", f"{m['n']} games already"
         if m["eligible"] >= 10 and m["hit_rate"] is not None and m["hit_rate"] < r["crowded_hit_rate"]:
             return "crowded", f"only {m['hits']} of {m['eligible']} copies reached 1K players"
+        if m["recent"] >= 6 and m["recent_hit_rate"] < r["crowded_hit_rate"]:
+            return "crowded", (f"the newest copies are failing: {m['recent_hits']} of {m['recent']} "
+                               f"from the last ~2 weeks reached 1K")
+        if m["n"] >= r["crowded_games"]:
+            return "crowded", f"{m['n']} games already"
         if age > r["crowded_age_days"]:
             return "crowded", f"the leader is {age:.0f} days old"
         cooling = g3 is not None and g3 < 0.85
@@ -297,7 +333,7 @@ class Radar:
             copies = set()
             for x in self.game_terms.get(uid, ()):
                 ys = self.young_term.get(x, set())
-                if len(ys) <= 12 and len(ys) / max(1, len(self.all_term[x])) >= self.r["min_novelty"]:
+                if 1 < len(ys) <= 12 and self.novelty(x) >= self.r["min_novelty"]:
                     copies |= ys
             copies.discard(uid)
             copies = sorted(copies, key=self.playing, reverse=True)

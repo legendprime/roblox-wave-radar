@@ -1,0 +1,68 @@
+# Runs the wave radar in the cloud every 3 hours. Nothing runs on your computer.
+#
+# Each run: restores the database from the `radar` branch, checks Roblox's charts and
+# search, finds waves, writes the dashboard, opens a GitHub issue for any new
+# "Jump in now" wave or breakout, then saves the dashboard + database back to `radar`.
+#
+# Dashboard: the `radar` branch's README (github.com/<you>/<repo>/tree/radar).
+# Turn it off: Actions tab → "Wave radar" → ⋯ → Disable workflow.
+name: Wave radar
+
+on:
+  schedule:
+    - cron: "17 */3 * * *"   # every 3 hours at :17 (UTC); GitHub may start it a few minutes late
+  workflow_dispatch: {}       # "Run workflow" button for an extra check
+
+permissions:
+  contents: write   # save the dashboard + database to the radar branch
+  issues: write     # open alert issues
+
+concurrency:
+  group: wave-radar
+  cancel-in-progress: false
+
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore the database from the radar branch
+        run: |
+          mkdir -p data
+          if git fetch --depth=1 origin radar 2>/dev/null; then
+            git show FETCH_HEAD:data/tracker.sqlite.gz > /tmp/db.gz && gunzip -c /tmp/db.gz > data/tracker.sqlite
+            ls -lh data/
+          else
+            echo "No radar branch yet: starting a fresh database."
+          fi
+
+      - name: Check Roblox, find waves, write the dashboard, send alerts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RADAR_NOTIFY: ${{ github.repository_owner }}
+        run: python -m tracker radar --vacuum
+
+      - name: Save the dashboard and database to the radar branch
+        if: ${{ !cancelled() && hashFiles('reports/DASHBOARD.md') != '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          out=$(mktemp -d)
+          mkdir -p "$out/data"
+          cp reports/DASHBOARD.md "$out/README.md"
+          cp reports/waves.json "$out/waves.json"
+          gzip -9 -c data/tracker.sqlite > "$out/data/tracker.sqlite.gz"
+          ls -lh "$out" "$out/data"
+          cd "$out"
+          git init -q -b radar
+          git add -A
+          git -c user.name="wave-radar" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "radar update $(date -u +%Y-%m-%dT%H:%MZ)"
+          # The radar branch keeps only the latest dashboard + database (no history to pile up).
+          git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" radar
