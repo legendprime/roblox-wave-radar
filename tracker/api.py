@@ -152,6 +152,24 @@ class Api:
                     out[v["targetId"]] = v["imageUrl"]
         return out
 
+    def badges(self, universe_id):
+        data = self.get(f"https://badges.roblox.com/v1/universes/{int(universe_id)}/badges",
+                        {"limit": 100, "sortOrder": "Asc"})
+        return data.get("data") or []
+
+    def group(self, group_id):
+        return self.get(f"https://groups.roblox.com/v1/groups/{int(group_id)}")
+
+    def creator_games(self, creator_type, creator_id):
+        kind = "groups" if creator_type == "Group" else "users"
+        data = self.get(f"https://games.roblox.com/v2/{kind}/{int(creator_id)}/games",
+                        {"accessFilter": "Public", "limit": 50, "sortOrder": "Desc"})
+        return data.get("data") or []
+
+    def followers(self, user_id):
+        data = self.get(f"https://friends.roblox.com/v1/users/{int(user_id)}/followers/count")
+        return data.get("count")
+
     def universe_for_place(self, place_id):
         data = self.get(PLACE_TO_UNIVERSE.format(int(place_id)))
         return data.get("universeId")

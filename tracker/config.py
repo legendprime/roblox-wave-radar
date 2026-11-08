@@ -65,6 +65,13 @@ DEFAULTS = {
         "breakout_min_peak": 1000,
         "lineage_genres": ["Simulation"],
     },
+    "enrich": {
+        "budget_s": 150,              # seconds per run for badge + creator lookups
+        "badge_refresh_hours": 20,    # badges about once a day
+        "creator_refresh_days": 7,    # creators about once a week
+        "key_games_limit": 200,
+        "big_creator_members": 1000000,
+    },
     "watch": [],
 }
 

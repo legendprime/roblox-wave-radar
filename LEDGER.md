@@ -1,5 +1,5 @@
 # Ledger: Roblox Trend Tracker
-_Updated 2026-11-08 06:50 by Claude Code (Opus 5.5)_ · **Status:** idle
+_Updated 2026-11-08 07:35 by Claude Code (Opus 5.5)_ · **Status:** working
 
 ## Goal
 Wave radar (2026-11-08): spot Roblox waves as they start (Just starting → Jump in now → Crowded → Fading) and show opportunities on a dashboard, running on GitHub Actions (user chose GitHub; nothing runs on their Mac).
@@ -34,7 +34,8 @@ Original goal: Collect daily data on Roblox games (charts + lineage-style search
 - Third cloud run (42474861557) OK: 44/44 searches in 41s (throttling varies by runner IP), 4,436 games snapshot, 220 new, no alerts (gate working), dashboard live at github.com/legendprime/roblox-wave-radar/tree/radar. Jump in now: ragdoll, malam.
 - Website (user asked for an app, chose a self-updating public website): tracker/site.py builds site/index.html (data inlined, no external libs) each run; workflow deploys it with GitHub Pages (upload-pages-artifact@v3 + deploy-pages@v4, environment github-pages). Repo must go public on free GitHub (user accepted); commit email legendprim3@gmail.com is already public via their demoapp repo.
 - Done: repo made public (gh repo edit --accept-visibility-change-consequences; gg visibility lacks that flag), Pages enabled (build_type=workflow). Run 42475925907 published the site; checked in the browser pane: tabs, cards, icons, expand list, lone breakouts, search filter, no console errors.
-- Now: nothing running locally; the cloud radar + website rebuild every 3h at :17 UTC.
+- Done (all 6 improvement groups, user said 'build all'): schema v4 (badges, badge_fetch, creators, updates, wave_days, copy_stage); tracker/enrich.py (badges daily + creators weekly for ~170 key games, 150s budget, most important first); tracker/insights.py (mechanics from keywords, stand-ins: visits/player from top badge, minutes/visit, like %, favs/1K, update rhythm; winners vs flops; opportunity score; rising; chart entries; your games; track record + timelines; wave-forming alerts); site rebuilt with Top opportunities, Your games, 9 tabs. 17 tests pass; all tabs render in a Node DOM smoke test. Grouping stays title-based (description grouping too noisy); descriptions feed mechanics instead.
+- Now: push, cloud run, verify the live site.
 - Next: watch the first day of cloud runs (growth/trend numbers appear after ~24h); tune [radar] thresholds if stages look off; user may want concept ideas for an open wave.
 
 ## In flight
@@ -44,6 +45,7 @@ Original goal: Collect daily data on Roblox games (charts + lineage-style search
 - none
 
 ## Log
+- 2026-11-08 07:35 Claude Code: insights, enrichment, track record, new site sections.
 - 2026-11-08 06:50 Claude Code: website live at legendprime.github.io/roblox-wave-radar, verified.
 - 2026-11-08 06:30 Claude Code: interactive website + Pages deploy step.
 - 2026-11-08 06:25 Claude Code: third cloud run verified; radar live.

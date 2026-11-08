@@ -130,8 +130,12 @@ def run_collect(conn, cfg, api, log=print):
 
     # 4. Decide which games need the details endpoint ---------------------
     meta = {r["universe_id"]: r for r in conn.execute(
-        "SELECT universe_id, meta_refreshed_at, last_refreshed_at FROM games")}
-    need = {uid for uid in seen if not meta[uid]["meta_refreshed_at"]} | set(watch)
+        "SELECT universe_id, meta_refreshed_at, last_refreshed_at, updated_at FROM games")}
+    # Key games (wave leaders, breakouts, your games) get details every run, so their
+    # visits per day and update history stay accurate.
+    row = conn.execute("SELECT value FROM meta WHERE key = 'key_games'").fetchone()
+    key_games = {int(u) for u in (json.loads(row[0]) if row and row[0] else []) if int(u) in meta}
+    need = {uid for uid in seen if not meta[uid]["meta_refreshed_at"]} | set(watch) | key_games
     young_cut = iso(started - dt.timedelta(days=c["keep_new_days"]))
     for r in conn.execute(
             "SELECT universe_id FROM games WHERE last_playing >= ? OR (first_seen_at >= ? AND last_playing >= ?)",
@@ -149,7 +153,7 @@ def run_collect(conn, cfg, api, log=print):
     details, votes = [], {}
     # Most important first: watchlist, then games with the most players. Anything not reached
     # within the time budget keeps its "needs details" status and is picked up next run.
-    need.sort(key=lambda u: (u not in watch, -(seen.get(u, {}).get("playing") or 0)))
+    need.sort(key=lambda u: (u not in watch, u not in key_games, -(seen.get(u, {}).get("playing") or 0)))
     t_details = time.monotonic()
     for i in range(0, len(need), 50):
         spent = time.monotonic() - t_details
@@ -184,6 +188,10 @@ def run_collect(conn, cfg, api, log=print):
         s["visits"] = d.get("visits")
         s["favorites"] = d.get("favoritedCount")
         name = d.get("name")
+        updated = norm_iso(d.get("updated"))
+        old = meta.get(uid)
+        if updated and (old is None or old["updated_at"] != updated):
+            conn.execute("INSERT OR IGNORE INTO updates VALUES (?,?,?)", (uid, updated, ts))
         conn.execute(
             """UPDATE games SET root_place_id = ?, name = ?, description = ?, creator_id = ?,
                creator_name = ?, creator_type = ?, creator_verified = ?, created_at = ?,

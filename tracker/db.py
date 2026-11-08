@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 DB_PATH = Path(os.environ.get("TRACKER_DB") or DATA_DIR / "tracker.sqlite")
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -75,6 +75,61 @@ CREATE TABLE IF NOT EXISTS wave_state (
   alerted_stage TEXT,
   alerted_at TEXT,
   last_seen TEXT
+);
+
+-- Badges of key games (the latest fetch only). The most-awarded badge is usually the
+-- join/"Welcome" badge, so visits / its award count ~ visits per player (a retention stand-in).
+CREATE TABLE IF NOT EXISTS badges (
+  universe_id INTEGER NOT NULL,
+  badge_id INTEGER NOT NULL,
+  name TEXT,
+  awarded INTEGER,
+  created TEXT,
+  PRIMARY KEY (universe_id, badge_id)
+) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS badge_fetch (universe_id INTEGER PRIMARY KEY, fetched_at TEXT, n INTEGER);
+
+-- Who makes the key games: group size (or followers), their other games.
+CREATE TABLE IF NOT EXISTS creators (
+  creator_type TEXT NOT NULL,
+  creator_id INTEGER NOT NULL,
+  name TEXT,
+  members INTEGER,
+  n_games INTEGER,
+  total_visits INTEGER,
+  top_game TEXT,
+  top_visits INTEGER,
+  fetched_at TEXT,
+  PRIMARY KEY (creator_type, creator_id)
+);
+
+-- Each distinct "last updated" time seen for a game = one published update.
+CREATE TABLE IF NOT EXISTS updates (
+  universe_id INTEGER NOT NULL,
+  updated_at TEXT NOT NULL,
+  seen_at TEXT,
+  PRIMARY KEY (universe_id, updated_at)
+) WITHOUT ROWID;
+
+-- The radar's own history: each wave's stage per day, and the stage a copy's wave was in
+-- on the day the copy was created. Together they show whether the stages predict outcomes.
+CREATE TABLE IF NOT EXISTS wave_days (
+  day TEXT NOT NULL,
+  wave TEXT NOT NULL,
+  label TEXT,
+  stage TEXT,
+  n INTEGER,
+  hits INTEGER,
+  eligible INTEGER,
+  total INTEGER,
+  PRIMARY KEY (day, wave)
+) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS copy_stage (
+  universe_id INTEGER PRIMARY KEY,
+  wave TEXT,
+  stage TEXT,
+  created_at TEXT,
+  recorded_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS alerts_log (

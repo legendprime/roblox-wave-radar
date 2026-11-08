@@ -39,6 +39,13 @@ def compose(alert, radar, repo, notify):
             body.append("- Doing best after it: " + " · ".join(
                 f"{link(u)} {compact(radar.playing(u))}" for u in w["best"][:3]))
         body.append(f"- {w['n']} games so far, {w['n7']} new this week · genre: {w['genre']}")
+    elif alert["kind"] == "forming":
+        x = alert["lone"]
+        name = radar.games[x["uid"]]["name"]
+        title = f"🌊 Wave forming: {name} just got {x['n_copies']} lookalikes"
+        body = [f"{link(x['uid'])} ({compact(x['playing'])} playing, {fmt_days(x['age'])} old) was a lone breakout. "
+                f"It now has **{x['n_copies']} lookalikes**: " + ", ".join(link(u) for u in x["copies"][:3]) + ".",
+                "", "When copies start appearing around a breakout, a wave is forming. This is the earliest point to plan a twist."]
     else:
         x = alert["lone"]
         name = radar.games[x["uid"]]["name"]

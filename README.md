@@ -6,7 +6,16 @@ It runs **in the cloud on GitHub every 3 hours**. Nothing runs on your computer.
 
 ## Where to look
 
-- **The app:** **https://legendprime.github.io/roblox-wave-radar/** is an interactive website rebuilt every 3 hours. It has stage tabs, search, a "tycoon lineage only" switch, player charts, and the full game list for each wave. Works on phone and computer.
+- **The app:** **https://legendprime.github.io/roblox-wave-radar/** is an interactive website rebuilt every 3 hours, on phone and computer. It has:
+  - **⭐ Top opportunities:** ranked, with the reasons for each.
+  - **🧑‍💻 Your games:** which wave each one is in, and that wave's stage.
+  - **Tabs:**
+    - 🟢 Jump in now · 🌱 Just starting · 🔴 Crowded
+    - 👀 Lone breakouts (🌊 marks one that just got its first lookalikes)
+    - 🚀 Rising fastest · 📈 New on charts
+    - 🧩 Mechanics: which mechanics show up in games that succeed vs fail
+    - 🎯 Track record: does the radar work?
+  - **Wave cards:** a 14-day player chart, mechanics, winners vs flops, the share held by big studios, plus the leader's stand-in stats: visits per player (from badges), minutes per visit, like rate, update rhythm, creator size, progress badges and new event badges.
 - **Plain-text version:** this repo's [`radar` branch](../../tree/radar) (it opens as that branch's README).
 - **Alerts:** a GitHub issue labelled `wave-alert` opens (and GitHub notifies you) when:
   - a wave moves to 🟢 **Jump in now**,

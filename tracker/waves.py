@@ -29,7 +29,7 @@ when where this that all one two can will make together
 """.split())
 GENERIC = set("""
 simulator sim tycoon obby game games roblox rp roleplay experience place hub lobby server servers
-private public world worlds battle
+private public world worlds battle clone copy
 """.split())
 
 BRACKETS = re.compile(r"[\[\(\{【「].*?[\]\)\}】」]")

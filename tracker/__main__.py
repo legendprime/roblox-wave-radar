@@ -8,7 +8,7 @@ import time
 
 import json
 
-from . import alerts, collect, config, dashboard, db, notify, predict, report, site, waves
+from . import alerts, collect, config, dashboard, db, enrich, insights, notify, predict, report, site, waves
 from . import api as api_mod
 
 
@@ -108,10 +108,22 @@ def cmd_radar(args, conn, cfg):
                      (json.dumps(radar.search_terms()),))
         conn.commit()
         found = radar.update_state() if not args.no_alerts else []
-        report.ensure_icons(conn, api, site.site_games(radar), log=log)
+        # Key games get full details every run and daily badge/creator lookups.
+        key = insights.Insights(radar, conn, cfg).key_games(
+            insights.Insights(radar, conn, cfg).rising(), cfg["enrich"]["key_games_limit"])
+        enrich.save_key_games(conn, key)
+        if not (args.no_collect or args.no_enrich):
+            enrich.run(conn, cfg, api, key, log=log)
+        report.ensure_icons(conn, api, site.site_games(radar, extra=key), log=log)
         radar.games = waves.Radar(conn, cfg).games  # pick up icons
+        ins = insights.Insights(radar, conn, cfg)
+        ins.record_track()
+        r = cfg["radar"]
+        n_runs = conn.execute("SELECT COUNT(*) FROM runs WHERE status IN ('ok','partial')").fetchone()[0]
+        warmed_up = n_runs >= r["alert_min_runs"] and len(radar.games) >= r["alert_min_games"] and not args.no_alerts
+        found = (found + ins.forming(warmed_up))[:r["max_alerts_per_run"]]
         dashboard.write(radar, conn, cfg, log=log)
-        site.write(radar, conn, cfg, log=log)
+        site.write(radar, conn, cfg, ins, log=log)
         alerts.send(conn, radar, found, log=log)
         if args.vacuum:
             conn.execute("VACUUM")
@@ -268,6 +280,7 @@ def main(argv=None):
     s = sub.add_parser("radar", help="collect, find waves, write reports/DASHBOARD.md, send alerts (what GitHub runs)")
     s.add_argument("--no-collect", action="store_true", help="re-analyse the existing data only")
     s.add_argument("--no-alerts", action="store_true")
+    s.add_argument("--no-enrich", action="store_true", help="skip the badge/creator lookups")
     s.add_argument("--vacuum", action="store_true", help="shrink the database file afterwards")
     s = sub.add_parser("run", help="collect, grade predictions, write the HTML report")
     s.add_argument("--no-report", action="store_true")
