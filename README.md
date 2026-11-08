@@ -76,7 +76,7 @@ scripts/uninstall_schedule.sh   # removes it (refuses while a run is in progress
 - Player counts are sampled every 3 hours, so the true peak can fall between samples.
 - The database only contains games that appeared in a chart or a search result at least once. Games with no visibility at all are invisible, so base rates mean "games that got noticed at all".
 - Base rates are only honest for games **launched after tracking began**, because older games were already past their peak. That column fills in over weeks.
-- `data/tracker.sqlite` is the irreplaceable part, and it isn't in git. Back it up with Time Machine or similar. Expect roughly 1–2 MB of growth per day.
+- `data/tracker.sqlite` is the irreplaceable part, and it isn't in git. Back it up with Time Machine or similar. The first run made a 5.5 MB database; expect a few MB of growth per run, so a few GB a year.
 
 ## Files
 

@@ -49,8 +49,14 @@ def fmt_days(d):
     return f"{d * 24:.0f}h" if d < 2 else f"{d:.0f}d"
 
 
+def short(n):
+    return f"{n // 1_000_000}M" if n >= 1_000_000 else f"{n // 1000}K" if n >= 1000 else str(n)
+
+
 def bucket_label(lo, hi):
-    return f"{compact(lo)}+" if hi is None else f"{compact(lo)}–{compact(hi)}"
+    if hi is None:
+        return f"{short(lo)}+"
+    return f"under {short(hi)}" if lo == 0 else f"{short(lo)}–{short(hi)}"
 
 
 class Game:
@@ -206,8 +212,8 @@ def base_rates(d):
     return Table(
         "📊 Base rates: how high do games in this genre get?",
         f"Highest player count each game reached while tracked, bucketed. Left column: games "
-        f"created since tracking began ({tracked_days:.1f} days ago), so their whole life is "
-        f"observed; this is the honest column and fills in over weeks. Right column: all genre "
+        f"created no more than 3 days before tracking began ({tracked_days:.1f} days ago), so "
+        f"their whole life is observed; this is the honest column and fills in over weeks. Right column: all genre "
         f"games created in the last 120 days, but older ones were already past their peak "
         f"when tracking started, so it understates them. Both only include games that showed "
         f"up in charts or search at least once.",
