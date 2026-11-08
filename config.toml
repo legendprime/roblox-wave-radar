@@ -1,0 +1,175 @@
+# Roblox Trend Tracker settings. Edit freely; every run re-reads this file.
+
+[collect]
+# Charts ("sorts") are pulled for each device. Phones are most of the audience.
+devices = ["high_end_phone", "computer"]
+country = "all"
+
+# Each query is run through Roblox search; results are where most of the
+# small games (the flops) come from. Keep it to the genre you care about.
+search_pages = 3          # 40 results per page
+queries = [
+  # current lineage words
+  "steal a", "steal an egg", "steal a brainrot", "for brainrots", "for animals",
+  "for eggs", "egg", "pets", "animals", "grow a", "garden",
+  "+1 speed", "keyboard escape", "tsunami", "lava",
+  "throw", "kick", "launch", "catch", "hatch", "train", "treadmill",
+  "lucky block", "break and steal", "ride a", "fish", "mine", "dig",
+  # generic genre words
+  "tycoon", "simulator", "incremental", "idle", "rng", "merge", "brainrot",
+  # current non-tycoon risers worth watching for loops to borrow
+  "dont splash", "survive", "escape",
+]
+
+# Keep refreshing a game while it has at least this many players, or while it
+# was first seen less than `keep_new_days` ago, or while it is on the watchlist.
+min_track_playing = 25
+keep_new_days = 30
+
+[alerts]
+# Player-count thresholds that create a "crossed" event the first time a game passes them.
+thresholds = [1000, 10000, 100000, 1000000]
+# Charts whose first appearance of a game creates an "entered chart" event.
+sorts = ["up-and-coming", "top-trending", "trending-in-simulation", "top-playing-now"]
+# macOS notifications: only for games younger than this many days...
+notify = true
+notify_max_age_days = 60
+# ...that cross one of these thresholds.
+notify_thresholds = [10000, 100000, 1000000]
+
+[report]
+breakout_max_age_days = 45   # "new game" window for the breakout list
+breakout_min_peak = 1000     # ignore anything smaller
+lineage_genres = ["Simulation"]   # genre_l1 values treated as "this genre"
+
+# Watchlist seeds. Add more here or with:  python3 -m tracker watch add <id or name> "note"
+# kind: "mine" = your games, "lineage" = reference games from the lineage doc.
+[[watch]]
+id = 10774902910
+kind = "mine"
+note = "Grow Food For Animals"
+[[watch]]
+id = 10774902807
+kind = "mine"
+note = "Stretch for Animals (published as Stretch for eggs)"
+[[watch]]
+id = 10773596411
+kind = "mine"
+note = "Shoot Balls"
+[[watch]]
+id = 10773169742
+kind = "mine"
+note = "the play room"
+[[watch]]
+id = 10772434039
+kind = "mine"
+note = "Dont Splash Verity"
+[[watch]]
+id = 10771225526
+kind = "mine"
+note = "Pixel RPG game"
+[[watch]]
+id = 10768821071
+kind = "mine"
+note = "Terraria 3D clone game"
+
+[[watch]]
+id = 7436755782
+kind = "lineage"
+note = "Grow a Garden (peak ~22.4M)"
+[[watch]]
+id = 7709344486
+kind = "lineage"
+note = "Steal a Brainrot (peak ~25.8M)"
+[[watch]]
+id = 8316902627
+kind = "lineage"
+note = "Plants & Brainrots: possibly Plants vs Brainrots renamed, verify"
+[[watch]]
+id = 9363735110
+kind = "lineage"
+note = "Escape Tsunami For Brainrots (peak ~5.0M)"
+[[watch]]
+id = 9584852943
+kind = "lineage"
+note = "+1 Speed Keyboard Escape | Candy & Chocolate (peak ~7.3M, unverified)"
+[[watch]]
+id = 9649298941
+kind = "lineage"
+note = "Survive LAVA for Brainrots (peak ~1.06M)"
+[[watch]]
+id = 10004244222
+kind = "lineage"
+note = "Kick a Lucky Block (peak ~1.69M)"
+[[watch]]
+id = 10035204815
+kind = "lineage"
+note = "Ride A Pet (peak ~1.55M)"
+[[watch]]
+id = 9509842868
+kind = "lineage"
+note = "Garden Horizons (peak ~1.44M)"
+[[watch]]
+id = 10200395747
+kind = "lineage"
+note = "Grow a Garden 2 (peak ~0.93M)"
+[[watch]]
+id = 10563114921
+kind = "lineage"
+note = "Steal An Egg (peak ~14.3M)"
+[[watch]]
+id = 10765288803
+kind = "lineage"
+note = "Break and Steal an Egg (peak ~1.31M)"
+[[watch]]
+id = 10766972131
+kind = "lineage"
+note = "Throw Food For Animals (peak ~1.56M)"
+[[watch]]
+id = 10765490774
+kind = "lineage"
+note = "Climb For Animals Eggs (peak ~167K)"
+[[watch]]
+id = 10766620257
+kind = "lineage"
+note = "Bike For Egg (peak ~149K)"
+[[watch]]
+id = 10769384180
+kind = "lineage"
+note = "Fake an Egg (peak ~164K)"
+[[watch]]
+id = 10769315427
+kind = "lineage"
+note = "Steal A Pet And Ride It"
+[[watch]]
+id = 10737231383
+kind = "lineage"
+note = "Jump To Steal An Egg (peak ~80K)"
+[[watch]]
+id = 10737911048
+kind = "lineage"
+note = "Grow Beanstalk to Steal An Egg (flop)"
+[[watch]]
+id = 10766345513
+kind = "lineage"
+note = "Bait an Animal (flop, garden+food+animals)"
+[[watch]]
+id = 8827308630
+kind = "lineage"
+note = "Launch Food For Animals (flop, garden+food+animals)"
+[[watch]]
+id = 10649255304
+kind = "lineage"
+note = "Pull An Egg"
+[[watch]]
+id = 10771053183
+kind = "lineage"
+note = "Net a Fish"
+[[watch]]
+id = 7326934954
+kind = "lineage"
+note = "99 Nights in the Forest (non-tycoon, peak ~14.2M)"
+[[watch]]
+id = 10771421858
+kind = "lineage"
+note = "DONT SPLASH (current fast riser, non-tycoon)"
