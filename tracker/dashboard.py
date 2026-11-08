@@ -76,6 +76,12 @@ class Page:
         out = ["# 📡 Roblox Wave Radar", "",
                f"_Updated {t_local.strftime('%a %b %-d, %-I:%M %p %Z')} · checks every 3 hours · "
                f"{n_games:,} games tracked · {hist_txt}_", ""]
+        last = self.conn.execute(
+            "SELECT status, errors FROM runs WHERE status IN ('ok','partial') ORDER BY id DESC LIMIT 1").fetchone()
+        if last and last["errors"]:
+            first = last["errors"].splitlines()[0]
+            out += [f"> ⚠️ The last check was incomplete ({esc(first)[:160]}). The next check usually fills the gap; "
+                    f"until then, copy counts may be low.", ""]
         if hist < 24:
             out += ["> Growth and trend numbers start once there's a day of history. Stages already "
                     "work from how the copies are doing.", ""]

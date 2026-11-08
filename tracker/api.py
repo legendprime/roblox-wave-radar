@@ -38,6 +38,8 @@ class Api:
         self.requests = 0
         self.errors = 0
         self.rate_limited = 0
+        self.rate_waits = 0
+        self.rate_wait_s = 0
         # Per-host pacing. The games endpoint advertises 300/min but returns
         # 429s well below that, so it starts slower and every 429 slows that host further.
         self._host_delay = {"games.roblox.com": 0.8}
@@ -62,7 +64,11 @@ class Api:
                     body = json.load(r)
                     if remaining is not None and remaining.split(",")[0].strip() == "0":
                         reset = r.headers.get("x-ratelimit-reset", "10")
-                        time.sleep(min(int(reset.split(",")[0]) + 1, 65))
+                        pause = min(int(reset.split(",")[0]) + 1, 65)
+                        self.rate_waits += 1
+                        self.rate_wait_s += pause
+                        self.log(f"  rate limit reached on {host}; waiting {pause}s")
+                        time.sleep(pause)
                     return body
             except urllib.error.HTTPError as e:
                 if e.code == 429:

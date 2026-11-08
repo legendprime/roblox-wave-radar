@@ -14,6 +14,8 @@ DEFAULTS = {
         "keep_new_days": 30,
         "unseen_refresh_min_playing": 200,
         "meta_refresh_per_run": 500,
+        "search_budget_s": 540,     # stop searching after this many seconds and keep what we have
+        "details_budget_s": 420,
     },
     "radar": {
         "timezone": "America/New_York",

@@ -8,6 +8,7 @@ rotating batch whose visits/metadata are oldest.
 """
 import datetime as dt
 import json
+import time
 
 from .api import ApiError
 from .config import watchlist
@@ -63,8 +64,17 @@ def run_collect(conn, cfg, api, log=print):
     # radar saved last run (so small copies of a new wave get found, not just the leaders).
     row = conn.execute("SELECT value FROM meta WHERE key = 'dynamic_queries'").fetchone()
     dynamic = json.loads(row[0]) if row and row[0] else []
-    queries = list(dict.fromkeys([q.lower() for q in c["queries"]] + [q.lower() for q in dynamic]))
-    for q in queries:
+    # Hot-wave words first: if Roblox slows us down and time runs out, those matter most.
+    queries = list(dict.fromkeys([q.lower() for q in dynamic] + [q.lower() for q in c["queries"]]))
+    t_search = time.monotonic()
+    for i, q in enumerate(queries, 1):
+        spent = time.monotonic() - t_search
+        if spent > c["search_budget_s"]:
+            errors.append(f"search stopped after {i - 1} of {len(queries)} queries ({spent:.0f}s time budget)")
+            log(f"  ! search time budget used up after {i - 1}/{len(queries)} queries")
+            break
+        if i % 10 == 0:
+            log(f"  search {i}/{len(queries)} ({spent:.0f}s, {len(seen)} games so far)")
         try:
             pos = 0
             for g in api.search(q, c["search_pages"]):
@@ -122,11 +132,24 @@ def run_collect(conn, cfg, api, log=print):
 
     # 5. Details + votes ----------------------------------------------------
     details, votes = [], {}
-    try:
-        details = api.games(need)
-    except ApiError as e:
-        errors.append(f"games: {e}")
-        log(f"  ! games: {e}")
+    # Most important first: watchlist, then games with the most players. Anything not reached
+    # within the time budget keeps its "needs details" status and is picked up next run.
+    need.sort(key=lambda u: (u not in watch, -(seen.get(u, {}).get("playing") or 0)))
+    t_details = time.monotonic()
+    for i in range(0, len(need), 50):
+        spent = time.monotonic() - t_details
+        if spent > c["details_budget_s"]:
+            errors.append(f"details stopped after {i} of {len(need)} games ({spent:.0f}s time budget)")
+            log(f"  ! details time budget used up after {i}/{len(need)} games")
+            break
+        if i and i % 500 == 0:
+            log(f"  details {i}/{len(need)} ({spent:.0f}s)")
+        try:
+            details.extend(api.games(need[i:i + 50]))
+        except ApiError as e:
+            errors.append(f"games: {e}")
+            log(f"  ! games: {e}")
+            break
     unseen = [u for u in need if u not in seen]
     if unseen:
         try:

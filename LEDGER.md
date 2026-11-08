@@ -27,7 +27,9 @@ Original goal: Collect daily data on Roblox games (charts + lineage-style search
 - Done: first run of the concept-selection system → analysis/2026-11-08-shortlist.md (top pick: ragdoll fling-yourself + Throw Food loop).
 - Done: radar engine (tracker/waves.py), dashboard (tracker/dashboard.py → reports/DASHBOARD.md + waves.json), GitHub-issue alerts (tracker/alerts.py), `radar` CLI command, hybrid collector (listing counts + limited details calls), daily table + pruning (schema v2), 13 tests pass.
 - Done: workflow .github/workflows/radar.yml (every 3h, dashboard+gzipped DB force-pushed to `radar` branch), README rewritten for the radar. Wave rules fixed: novelty ignores dead old games; crowded = copies failing (overall or newest), not raw count; small hot pockets inside a crowded wave shown separately. Hybrid collector run: 2.5 min.
-- Now: create private repo (gg import roblox-wave-radar), trigger first cloud run, check it.
+- Done: private repo legendprime/roblox-wave-radar created (gg import) and pushed.
+- First cloud run (42471596440) was cancelled at the 25-min limit: charts worked from GitHub, then search went silent (suspected silent 65s rate-limit sleeps on shared GitHub IPs). Fix: log rate-limit waits + search progress; time budgets for search (540s) and details (420s); hot-wave queries first; dashboard warns on incomplete checks.
+- Now: second cloud run to confirm.
 - Next: user decides on a concept; recheck the ragdoll wave in 1–2 days with a manual run. Manual snapshot: python3 -m tracker run. Don't reinstall the schedule unless the user asks.
 
 ## In flight
@@ -37,6 +39,7 @@ Original goal: Collect daily data on Roblox games (charts + lineage-style search
 - none
 
 ## Log
+- 2026-11-08 06:00 Claude Code: first cloud run timed out; added logging + time budgets.
 - 2026-11-08 05:40 Claude Code: workflow + README; wave rules fixed after deeper search exposed flaws.
 - 2026-11-08 05:30 Claude Code: wave radar engine, dashboard, alerts, tests.
 - 2026-11-08 05:20 Claude Code: ran the concept system on the snapshot; shortlist saved in analysis/.
