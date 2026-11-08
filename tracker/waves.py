@@ -364,24 +364,35 @@ class Radar:
         and for brand-new games that just crossed the lone-breakout alert threshold."""
         r, ts = self.r, iso(self.t)
         alerts = []
+        # Quality gate: a thin or brand-new database overrates waves (it sees the winners
+        # before the flops), so alerts wait for enough checks and games.
+        n_runs = self.conn.execute("SELECT COUNT(*) FROM runs WHERE status IN ('ok','partial')").fetchone()[0]
+        warmed_up = n_runs >= r["alert_min_runs"] and len(self.games) >= r["alert_min_games"]
         state = {row["wave"]: row for row in self.conn.execute("SELECT * FROM wave_state")}
         for w in self.waves:
             row = state.get(w["key"])
             if row is None:
-                self.conn.execute("INSERT INTO wave_state (wave, stage, stage_since, last_seen) VALUES (?,?,?,?)",
-                                  (w["key"], w["stage"], ts, ts))
+                stage_runs = 1
+                self.conn.execute("INSERT INTO wave_state (wave, stage, stage_since, stage_runs, last_seen)"
+                                  " VALUES (?,?,?,1,?)", (w["key"], w["stage"], ts, ts))
+            elif row["stage"] != w["stage"]:
+                stage_runs = 1
+                self.conn.execute("UPDATE wave_state SET stage = ?, stage_since = ?, stage_runs = 1, last_seen = ?"
+                                  " WHERE wave = ?", (w["stage"], ts, ts, w["key"]))
             else:
-                if row["stage"] != w["stage"]:
-                    self.conn.execute("UPDATE wave_state SET stage = ?, stage_since = ? WHERE wave = ?",
-                                      (w["stage"], ts, w["key"]))
-                self.conn.execute("UPDATE wave_state SET last_seen = ? WHERE wave = ?", (ts, w["key"]))
+                stage_runs = (row["stage_runs"] or 1) + 1
+                self.conn.execute("UPDATE wave_state SET stage_runs = ?, last_seen = ? WHERE wave = ?",
+                                  (stage_runs, ts, w["key"]))
+            w["stage_runs"] = stage_runs
             already = row["alerted_stage"] if row else None
             loud_enough = w["stage"] == "jump" or w["leader_playing"] >= r["alert_starting_min_leader"]
-            if w["stage"] in ("jump", "starting") and already != w["stage"] and loud_enough:
+            steady = stage_runs >= r["alert_min_stage_runs"]
+            if (w["stage"] in ("jump", "starting") and already != w["stage"] and loud_enough
+                    and steady and warmed_up):
                 alerts.append({"kind": w["stage"], "key": f"wave:{w['key']}:{w['stage']}", "wave": w})
         latest = self.conn.execute(
             "SELECT started_at FROM runs WHERE status IN ('ok','partial') ORDER BY id DESC LIMIT 1").fetchone()
-        if latest:
+        if latest and warmed_up:
             lone_ids = {x["uid"]: x for x in self.lone}
             for e in self.conn.execute(
                     """SELECT universe_id, value FROM events WHERE kind = 'crossed' AND baseline = 0

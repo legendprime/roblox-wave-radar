@@ -82,6 +82,15 @@ class Page:
             first = last["errors"].splitlines()[0]
             out += [f"> ⚠️ The last check was incomplete ({esc(first)[:160]}). The next check usually fills the gap; "
                     f"until then, copy counts may be low.", ""]
+        srow = self.conn.execute("SELECT value FROM meta WHERE key = 'last_search'").fetchone()
+        if srow and srow[0]:
+            s = json.loads(srow[0])
+            if s["done"] < s["planned"]:
+                per_run = max(1, s["fixed_done"])
+                out += [f"> This check ran {s['done']} of {s['planned']} searches: Roblox limits searches from "
+                        f"cloud servers. Hot-wave words go first every time; the fixed list of "
+                        f"{s['fixed_total']} words cycles every ~{-(-s['fixed_total'] // per_run)} checks, and every "
+                        f"game found stays tracked.", ""]
         if hist < 24:
             out += ["> Growth and trend numbers start once there's a day of history. Stages already "
                     "work from how the copies are doing.", ""]

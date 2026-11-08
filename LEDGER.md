@@ -29,7 +29,9 @@ Original goal: Collect daily data on Roblox games (charts + lineage-style search
 - Done: workflow .github/workflows/radar.yml (every 3h, dashboard+gzipped DB force-pushed to `radar` branch), README rewritten for the radar. Wave rules fixed: novelty ignores dead old games; crowded = copies failing (overall or newest), not raw count; small hot pockets inside a crowded wave shown separately. Hybrid collector run: 2.5 min.
 - Done: private repo legendprime/roblox-wave-radar created (gg import) and pushed.
 - First cloud run (42471596440) was cancelled at the 25-min limit: charts worked from GitHub, then search went silent (suspected silent 65s rate-limit sleeps on shared GitHub IPs). Fix: log rate-limit waits + search progress; time budgets for search (540s) and details (420s); hot-wave queries first; dashboard warns on incomplete checks.
-- Now: second cloud run to confirm.
+- Second cloud run (42473494375) succeeded but search was throttled to ~1 request/min from GitHub (4/38 searches), so it saw mostly winners and sent 4 wrong Jump-in alerts (evolution, animals, roadster, ride); closed as issues #2-5 with a correction note. #1 ragdoll is right.
+- Fix: search rotation (hot-wave words first, fixed list continues via meta.search_cursor), phone-only charts, 2 pages; alert gate (>=3 checks, >=3000 games, stage held 2 checks; schema v3 wave_state.stage_runs); dashboard notes search coverage. Cloud DB seeded with local full-search data (4,774 games, runs 1-2) on the radar branch.
+- Now: third cloud run to confirm.
 - Next: user decides on a concept; recheck the ragdoll wave in 1–2 days with a manual run. Manual snapshot: python3 -m tracker run. Don't reinstall the schedule unless the user asks.
 
 ## In flight
@@ -39,6 +41,7 @@ Original goal: Collect daily data on Roblox games (charts + lineage-style search
 - none
 
 ## Log
+- 2026-11-08 06:20 Claude Code: search rotation + alert gate; seeded cloud DB; closed 4 wrong alerts.
 - 2026-11-08 06:00 Claude Code: first cloud run timed out; added logging + time budgets.
 - 2026-11-08 05:40 Claude Code: workflow + README; wave rules fixed after deeper search exposed flaws.
 - 2026-11-08 05:30 Claude Code: wave radar engine, dashboard, alerts, tests.

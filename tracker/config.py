@@ -14,8 +14,10 @@ DEFAULTS = {
         "keep_new_days": 30,
         "unseen_refresh_min_playing": 200,
         "meta_refresh_per_run": 500,
-        "search_budget_s": 540,     # stop searching after this many seconds and keep what we have
-        "details_budget_s": 420,
+        "search_budget_s": 540,     # stop searching after this many seconds; the rest continue next run
+        "details_budget_s": 480,
+        "hot_queries_per_run": 6,
+        "hot_search_pages": 2,
     },
     "radar": {
         "timezone": "America/New_York",
@@ -44,6 +46,9 @@ DEFAULTS = {
         "alert_lone_playing": 10000,
         "alert_lone_max_age_days": 21,
         "max_alerts_per_run": 5,
+        "alert_min_runs": 3,          # no alerts until the database has this many checks...
+        "alert_min_games": 3000,      # ...and this many games (a thin database overrates waves)
+        "alert_min_stage_runs": 2,    # a wave must hold its stage for this many checks in a row
         "alert_starting_min_leader": 10000,
         "lineage_subgenres": ["Tycoon", "Incremental Simulator", "Idle"],
         "generic_words": [],

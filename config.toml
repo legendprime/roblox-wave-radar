@@ -1,13 +1,14 @@
 # Roblox Trend Tracker settings. Edit freely; every run re-reads this file.
 
 [collect]
-# Charts ("sorts") are pulled for each device. Phones are most of the audience.
-devices = ["high_end_phone", "computer"]
+# Charts ("sorts") are pulled for each device. Phones are most of the audience, and every
+# chart request uses up some of Roblox's search allowance, so phone only.
+devices = ["high_end_phone"]
 country = "all"
 
 # Each query is run through Roblox search; results are where most of the
 # small games (the flops) come from. Keep it to the genre you care about.
-search_pages = 3          # 40 results per page
+search_pages = 2          # 40 results per page
 queries = [
   # current lineage words
   "steal a", "steal an egg", "steal a brainrot", "for brainrots", "for animals",

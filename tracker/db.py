@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 DB_PATH = Path(os.environ.get("TRACKER_DB") or DATA_DIR / "tracker.sqlite")
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS wave_state (
   wave TEXT PRIMARY KEY,
   stage TEXT,
   stage_since TEXT,
+  stage_runs INTEGER NOT NULL DEFAULT 1,   -- checks in a row at this stage
   alerted_stage TEXT,
   alerted_at TEXT,
   last_seen TEXT
@@ -241,6 +242,10 @@ def _migrate(conn, version):
             last_favorites = (SELECT favorites FROM snapshots s WHERE s.universe_id = games.universe_id ORDER BY ts DESC LIMIT 1)""")
         conn.execute("""INSERT OR REPLACE INTO daily
             SELECT universe_id, substr(ts, 1, 10), MAX(playing), MAX(visits) FROM snapshots GROUP BY 1, 2""")
+    if 0 < version < 3:
+        have = {r[1] for r in conn.execute("PRAGMA table_info(wave_state)")}
+        if "stage_runs" not in have:
+            conn.execute("ALTER TABLE wave_state ADD COLUMN stage_runs INTEGER NOT NULL DEFAULT 1")
 
 
 def compact(conn, keep_snapshot_days=8, keep_sort_days=3, keep_search_days=2):

@@ -62,22 +62,29 @@ def run_collect(conn, cfg, api, log=print):
     # 2. Search -------------------------------------------------------------
     # Fixed queries from config.toml, plus the words of currently hot waves that the
     # radar saved last run (so small copies of a new wave get found, not just the leaders).
+    # Roblox throttles search hard from shared cloud IPs (about one request a minute from
+    # GitHub), so searches rotate: hot-wave words first every run, then the fixed list
+    # continues where the last run stopped. Games found once stay tracked afterwards.
     row = conn.execute("SELECT value FROM meta WHERE key = 'dynamic_queries'").fetchone()
-    dynamic = json.loads(row[0]) if row and row[0] else []
-    # Hot-wave words first: if Roblox slows us down and time runs out, those matter most.
-    queries = list(dict.fromkeys([q.lower() for q in dynamic] + [q.lower() for q in c["queries"]]))
+    dynamic = [q.lower() for q in (json.loads(row[0]) if row and row[0] else [])][:c["hot_queries_per_run"]]
+    fixed = [q.lower() for q in c["queries"] if q.lower() not in dynamic]
+    row = conn.execute("SELECT value FROM meta WHERE key = 'search_cursor'").fetchone()
+    start = int(row[0]) % len(fixed) if row and fixed else 0
+    plan = ([(q, c["hot_search_pages"], True) for q in dynamic]
+            + [(q, c["search_pages"], False) for q in fixed[start:] + fixed[:start]])
     t_search = time.monotonic()
-    for i, q in enumerate(queries, 1):
+    done = done_fixed = 0
+    for q, pages, hot in plan:
         spent = time.monotonic() - t_search
         if spent > c["search_budget_s"]:
-            errors.append(f"search stopped after {i - 1} of {len(queries)} queries ({spent:.0f}s time budget)")
-            log(f"  ! search time budget used up after {i - 1}/{len(queries)} queries")
+            log(f"  search time budget used ({spent:.0f}s): {done} of {len(plan)} searches this run, "
+                f"the rest continue next run")
             break
-        if i % 10 == 0:
-            log(f"  search {i}/{len(queries)} ({spent:.0f}s, {len(seen)} games so far)")
+        if done and done % 10 == 0:
+            log(f"  search {done}/{len(plan)} ({spent:.0f}s, {len(seen)} games so far)")
         try:
             pos = 0
-            for g in api.search(q, c["search_pages"]):
+            for g in api.search(q, pages):
                 uid = remember(g, f"search:{q}")
                 if uid:
                     pos += 1
@@ -86,7 +93,15 @@ def run_collect(conn, cfg, api, log=print):
         except ApiError as e:
             errors.append(f"search/{q}: {e}")
             log(f"  ! search '{q}': {e}")
-    log(f"search: {len(search_rows)} results over {len(queries)} queries ({len(dynamic)} from hot waves); "
+        done += 1
+        done_fixed += 0 if hot else 1
+    if fixed:
+        conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('search_cursor', ?)",
+                     (str((start + done_fixed) % len(fixed)),))
+    conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('last_search', ?)",
+                 (json.dumps({"done": done, "planned": len(plan), "hot": len(dynamic),
+                              "fixed_done": done_fixed, "fixed_total": len(fixed)}),))
+    log(f"search: {len(search_rows)} results from {done}/{len(plan)} searches ({len(dynamic)} hot-wave words); "
         f"{len(seen)} distinct games seen this run")
 
     conn.executemany("INSERT OR IGNORE INTO sort_hits VALUES (?,?,?,?,?,?,?,?)", sort_rows)

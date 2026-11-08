@@ -72,14 +72,20 @@ class StageTests(unittest.TestCase):
         self.assertEqual(found["juggle"]["stage"], "crowded")
         self.assertIn("Moon Vacuum Tycoon", [radar.games[x["uid"]]["name"] for x in radar.lone])
 
-    def test_alerts_fire_once_per_stage(self):
+    def _check(self):
         radar = waves.Radar(self.conn, self.cfg, t=self.t)
         radar.analyse()
-        first = radar.update_state()
-        self.assertIn("wave:wobble:jump", [a["key"] for a in first])
-        radar2 = waves.Radar(self.conn, self.cfg, t=self.t)
-        radar2.analyse()
-        self.assertEqual([a for a in radar2.update_state() if a["key"] == "wave:wobble:jump"], [])
+        return [a["key"] for a in radar.update_state()]
+
+    def test_alerts_wait_for_a_steady_stage_then_fire_once(self):
+        self.cfg["radar"].update(alert_min_runs=0, alert_min_games=0, alert_min_stage_runs=2)
+        self.assertNotIn("wave:wobble:jump", self._check())   # first sighting: wait
+        self.assertIn("wave:wobble:jump", self._check())      # held for 2 checks: alert
+        self.assertNotIn("wave:wobble:jump", self._check())   # already alerted
+
+    def test_no_alerts_from_a_thin_database(self):
+        self.cfg["radar"].update(alert_min_runs=3, alert_min_games=0, alert_min_stage_runs=1)
+        self.assertEqual(self._check(), [])                   # only 1 check so far
 
     def test_search_terms_include_hot_waves(self):
         radar = waves.Radar(self.conn, self.cfg, t=self.t)
