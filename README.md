@@ -59,7 +59,9 @@ python3 -m tracker label "Steal An Egg" stage.capability=treadmill stage.trip=ru
 python3 -m tracker label list stage.capability
 ```
 
-## Schedule
+## Schedule (not installed)
+
+By default nothing runs on its own: run `python3 -m tracker run` whenever you want a snapshot. Optional automatic runs:
 
 ```bash
 scripts/install_schedule.sh     # LaunchAgent: every 3 hours at :07; one catch-up run on wake
