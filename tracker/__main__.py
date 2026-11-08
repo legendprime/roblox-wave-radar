@@ -8,7 +8,7 @@ import time
 
 import json
 
-from . import alerts, collect, config, dashboard, db, notify, predict, report, waves
+from . import alerts, collect, config, dashboard, db, notify, predict, report, site, waves
 from . import api as api_mod
 
 
@@ -108,9 +108,10 @@ def cmd_radar(args, conn, cfg):
                      (json.dumps(radar.search_terms()),))
         conn.commit()
         found = radar.update_state() if not args.no_alerts else []
-        report.ensure_icons(conn, api, dashboard.shown_games(radar), log=log)
+        report.ensure_icons(conn, api, site.site_games(radar), log=log)
         radar.games = waves.Radar(conn, cfg).games  # pick up icons
         dashboard.write(radar, conn, cfg, log=log)
+        site.write(radar, conn, cfg, log=log)
         alerts.send(conn, radar, found, log=log)
         if args.vacuum:
             conn.execute("VACUUM")

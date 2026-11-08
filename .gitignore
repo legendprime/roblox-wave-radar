@@ -45,3 +45,6 @@ secrets.yml
 secrets.yaml
 credentials.yml
 credentials.yaml
+
+# Built by the radar each run and published with GitHub Pages
+site/

@@ -32,7 +32,8 @@ Original goal: Collect daily data on Roblox games (charts + lineage-style search
 - Second cloud run (42473494375) succeeded but search was throttled to ~1 request/min from GitHub (4/38 searches), so it saw mostly winners and sent 4 wrong Jump-in alerts (evolution, animals, roadster, ride); closed as issues #2-5 with a correction note. #1 ragdoll is right.
 - Fix: search rotation (hot-wave words first, fixed list continues via meta.search_cursor), phone-only charts, 2 pages; alert gate (>=3 checks, >=3000 games, stage held 2 checks; schema v3 wave_state.stage_runs); dashboard notes search coverage. Cloud DB seeded with local full-search data (4,774 games, runs 1-2) on the radar branch.
 - Third cloud run (42474861557) OK: 44/44 searches in 41s (throttling varies by runner IP), 4,436 games snapshot, 220 new, no alerts (gate working), dashboard live at github.com/legendprime/roblox-wave-radar/tree/radar. Jump in now: ragdoll, malam.
-- Now: nothing running locally; the cloud radar runs every 3h at :17 UTC.
+- Website (user asked for an app, chose a self-updating public website): tracker/site.py builds site/index.html (data inlined, no external libs) each run; workflow deploys it with GitHub Pages (upload-pages-artifact@v3 + deploy-pages@v4, environment github-pages). Repo must go public on free GitHub (user accepted); commit email legendprim3@gmail.com is already public via their demoapp repo.
+- Now: make repo public, enable Pages (build_type=workflow), run, verify https://legendprime.github.io/roblox-wave-radar/.
 - Next: watch the first day of cloud runs (growth/trend numbers appear after ~24h); tune [radar] thresholds if stages look off; user may want concept ideas for an open wave.
 
 ## In flight
@@ -42,6 +43,7 @@ Original goal: Collect daily data on Roblox games (charts + lineage-style search
 - none
 
 ## Log
+- 2026-11-08 06:30 Claude Code: interactive website + Pages deploy step.
 - 2026-11-08 06:25 Claude Code: third cloud run verified; radar live.
 - 2026-11-08 06:20 Claude Code: search rotation + alert gate; seeded cloud DB; closed 4 wrong alerts.
 - 2026-11-08 06:00 Claude Code: first cloud run timed out; added logging + time budgets.

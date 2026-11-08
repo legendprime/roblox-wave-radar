@@ -4,7 +4,8 @@
 # search, finds waves, writes the dashboard, opens a GitHub issue for any new
 # "Jump in now" wave or breakout, then saves the dashboard + database back to `radar`.
 #
-# Dashboard: the `radar` branch's README (github.com/<you>/<repo>/tree/radar).
+# Website: https://<you>.github.io/<repo>/ (published with GitHub Pages every run).
+# Plain-text dashboard: the `radar` branch's README (github.com/<you>/<repo>/tree/radar).
 # Turn it off: Actions tab → "Wave radar" → ⋯ → Disable workflow.
 name: Wave radar
 
@@ -16,6 +17,8 @@ on:
 permissions:
   contents: write   # save the dashboard + database to the radar branch
   issues: write     # open alert issues
+  pages: write      # publish the website
+  id-token: write   # required by GitHub Pages deployments
 
 concurrency:
   group: wave-radar
@@ -25,6 +28,9 @@ jobs:
   radar:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -66,3 +72,14 @@ jobs:
             commit -q -m "radar update $(date -u +%Y-%m-%dT%H:%MZ)"
           # The radar branch keeps only the latest dashboard + database (no history to pile up).
           git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" radar
+
+      - name: Package the website
+        if: ${{ !cancelled() && hashFiles('site/index.html') != '' }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Publish the website
+        if: ${{ !cancelled() && hashFiles('site/index.html') != '' }}
+        id: deployment
+        uses: actions/deploy-pages@v4
