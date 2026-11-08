@@ -1,0 +1,10 @@
+# Collected data and generated output (the database is the irreplaceable part: back it up, don't commit it)
+data/
+reports/
+logs/
+*.sqlite
+*.sqlite-*
+__pycache__/
+*.pyc
+.DS_Store
+.env
