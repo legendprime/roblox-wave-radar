@@ -1,8 +1,10 @@
 # Ledger: Roblox Trend Tracker
-_Updated 2026-11-08 05:20 by Claude Code (Opus 5.5)_ · **Status:** idle
+_Updated 2026-11-08 05:30 by Claude Code (Opus 5.5)_ · **Status:** working
 
 ## Goal
-Collect daily data on Roblox games (charts + lineage-style search terms), including the flops, so we can spot breakouts early, measure base rates, and later backtest/grade predictions about which concepts reach 1M+ CCU.
+Wave radar (2026-11-08): spot Roblox waves as they start (Just starting → Jump in now → Crowded → Fading) and show opportunities on a dashboard, running on GitHub Actions (user chose GitHub; nothing runs on their Mac).
+
+Original goal: Collect daily data on Roblox games (charts + lineage-style search terms), including the flops, so we can spot breakouts early, measure base rates, and later backtest/grade predictions about which concepts reach 1M+ CCU.
 
 ## Constraints
 - Python 3 stdlib only (no pip installs); SQLite database in data/ (gitignored).
@@ -22,7 +24,8 @@ Collect daily data on Roblox games (charts + lineage-style search terms), includ
 - Done: LaunchAgent installed, then removed at the user's request (they don't want a program running on their Mac); plist in ~/.Trash. Runs are manual only now. Fixed DB locking (collector commits before network phase; connect() no longer writes).
 - Done: first real collection OK (run 1: 4,031 games, 249 requests, 456s, 5.5 MB DB); report checked via latest.md (HTML not viewed: browser pane can't open file://).
 - Done: first run of the concept-selection system → analysis/2026-11-08-shortlist.md (top pick: ragdoll fling-yourself + Throw Food loop).
-- Now: nothing running, nothing scheduled.
+- Done: radar engine (tracker/waves.py), dashboard (tracker/dashboard.py → reports/DASHBOARD.md + waves.json), GitHub-issue alerts (tracker/alerts.py), `radar` CLI command, hybrid collector (listing counts + limited details calls), daily table + pruning (schema v2), 13 tests pass.
+- Now: GitHub workflow (.github/workflows/radar.yml), README, private repo via gg import, first cloud run.
 - Next: user decides on a concept; recheck the ragdoll wave in 1–2 days with a manual run. Manual snapshot: python3 -m tracker run. Don't reinstall the schedule unless the user asks.
 
 ## In flight
@@ -32,6 +35,7 @@ Collect daily data on Roblox games (charts + lineage-style search terms), includ
 - none
 
 ## Log
+- 2026-11-08 05:30 Claude Code: wave radar engine, dashboard, alerts, tests.
 - 2026-11-08 05:20 Claude Code: ran the concept system on the snapshot; shortlist saved in analysis/.
 - 2026-11-08 04:58 Claude Code: schedule removed at user's request; README says runs are manual.
 - 2026-11-08 04:52 Claude Code: first real run verified; clearer base-rate labels; README storage estimate corrected.

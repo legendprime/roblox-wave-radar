@@ -6,8 +6,10 @@ import fcntl
 import sys
 import time
 
+import json
+
+from . import alerts, collect, config, dashboard, db, notify, predict, report, waves
 from . import api as api_mod
-from . import collect, config, db, notify, predict, report
 
 
 def log(msg):
@@ -76,9 +78,44 @@ def cmd_run(args, conn, cfg):
             log(f"graded {n} prediction(s)")
         if not args.no_report:
             report.write_reports(conn, cfg, api, log=log)
-        notify.send(conn, cfg, log=log)
+        if sys.platform == "darwin":
+            notify.send(conn, cfg, log=log)
         log(f"done in {time.monotonic() - t0:.0f}s ({api.rate_limited} rate-limit retries)")
         return 0 if result["status"] != "failed" else 1
+
+
+def cmd_radar(args, conn, cfg):
+    """What the GitHub workflow runs: collect, find waves, write the dashboard, send alerts."""
+    with RunLock():
+        conn.execute("UPDATE runs SET status = 'abandoned' WHERE status = 'running'")
+        conn.commit()
+        t0 = time.monotonic()
+        api = api_mod.Api(log=log)
+        if not args.no_collect:
+            try:
+                collect.run_collect(conn, cfg, api, log=log)
+            except Exception as e:
+                conn.rollback()
+                conn.execute("UPDATE runs SET status = 'failed', finished_at = ?, errors = ? "
+                             "WHERE status = 'running'", (db.iso(db.now()), repr(e)))
+                conn.commit()
+                raise
+        db.compact(conn)
+        predict.grade(conn)
+        radar = waves.Radar(conn, cfg)
+        radar.analyse()
+        conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('dynamic_queries', ?)",
+                     (json.dumps(radar.search_terms()),))
+        conn.commit()
+        found = radar.update_state() if not args.no_alerts else []
+        report.ensure_icons(conn, api, dashboard.shown_games(radar), log=log)
+        radar.games = waves.Radar(conn, cfg).games  # pick up icons
+        dashboard.write(radar, conn, cfg, log=log)
+        alerts.send(conn, radar, found, log=log)
+        if args.vacuum:
+            conn.execute("VACUUM")
+        counts = {s: sum(1 for w in radar.waves if w["stage"] == s) for s in waves.STAGES}
+        log(f"waves: {counts}; lone breakouts {len(radar.lone)}; done in {time.monotonic() - t0:.0f}s")
 
 
 def cmd_report(args, conn, cfg):
@@ -227,7 +264,11 @@ def main(argv=None):
     p = argparse.ArgumentParser(prog="python3 -m tracker", description="Roblox trend tracker")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    s = sub.add_parser("run", help="collect, grade predictions, write report, notify (what the schedule runs)")
+    s = sub.add_parser("radar", help="collect, find waves, write reports/DASHBOARD.md, send alerts (what GitHub runs)")
+    s.add_argument("--no-collect", action="store_true", help="re-analyse the existing data only")
+    s.add_argument("--no-alerts", action="store_true")
+    s.add_argument("--vacuum", action="store_true", help="shrink the database file afterwards")
+    s = sub.add_parser("run", help="collect, grade predictions, write the HTML report")
     s.add_argument("--no-report", action="store_true")
     s = sub.add_parser("report", help="rewrite the report from the database without collecting")
     s.add_argument("--offline", action="store_true", help="skip fetching missing icons")

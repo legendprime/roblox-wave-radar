@@ -55,9 +55,14 @@ def grade(conn):
         if not win:
             continue
         start, end = win
+        lo, hi = iso(start), iso(min(end, t_now))
+        # Raw snapshots are kept about a week; older windows fall back to daily peaks.
         peak = conn.execute(
-            "SELECT MAX(playing) FROM snapshots WHERE universe_id = ? AND ts >= ? AND ts <= ?",
-            (p["universe_id"], iso(start), iso(min(end, t_now)))).fetchone()[0]
+            """SELECT MAX(p) FROM (
+                 SELECT playing AS p FROM snapshots WHERE universe_id = ? AND ts >= ? AND ts <= ?
+                 UNION ALL
+                 SELECT peak_playing FROM daily WHERE universe_id = ? AND day >= ? AND day <= ?)""",
+            (p["universe_id"], lo, hi, p["universe_id"], lo[:10], hi[:10])).fetchone()[0]
         if peak is not None and peak >= p["threshold"]:
             outcome = 1                      # already hit, no need to wait
         elif t_now >= end:

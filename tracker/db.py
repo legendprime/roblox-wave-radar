@@ -1,15 +1,16 @@
 """SQLite storage. All timestamps are UTC ISO-8601 strings like 2026-11-08T09:30:00Z,
 so plain string comparison orders them correctly."""
 import datetime as dt
+import os
 import re
 import sqlite3
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
-DB_PATH = DATA_DIR / "tracker.sqlite"
+DB_PATH = Path(os.environ.get("TRACKER_DB") or DATA_DIR / "tracker.sqlite")
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -50,7 +51,38 @@ CREATE TABLE IF NOT EXISTS games (
   peak_playing INTEGER DEFAULT 0,
   peak_playing_at TEXT,
   icon_url TEXT,
-  icon_fetched_at TEXT
+  icon_fetched_at TEXT,
+  meta_refreshed_at TEXT,      -- last time the details endpoint was called for it
+  last_visits INTEGER,
+  last_favorites INTEGER
+);
+
+-- One row per game per UTC day: kept forever (raw snapshots are pruned after a week).
+CREATE TABLE IF NOT EXISTS daily (
+  universe_id INTEGER NOT NULL,
+  day TEXT NOT NULL,
+  peak_playing INTEGER,
+  visits INTEGER,
+  PRIMARY KEY (universe_id, day)
+) WITHOUT ROWID;
+
+-- Remembers each wave's stage between runs, so alerts fire once per stage change.
+CREATE TABLE IF NOT EXISTS wave_state (
+  wave TEXT PRIMARY KEY,
+  stage TEXT,
+  stage_since TEXT,
+  alerted_stage TEXT,
+  alerted_at TEXT,
+  last_seen TEXT
+);
+
+CREATE TABLE IF NOT EXISTS alerts_log (
+  id INTEGER PRIMARY KEY,
+  ts TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  key TEXT NOT NULL,
+  title TEXT,
+  url TEXT
 );
 
 CREATE TABLE IF NOT EXISTS name_history (
@@ -186,8 +218,35 @@ def connect(path=DB_PATH):
     # (status, game, report) would wait on a collection that is writing.
     if conn.execute("PRAGMA journal_mode").fetchone()[0].lower() != "wal":
         conn.execute("PRAGMA journal_mode=WAL")
-    if conn.execute("PRAGMA user_version").fetchone()[0] < SCHEMA_VERSION:
+    version = conn.execute("PRAGMA user_version").fetchone()[0]
+    if version < SCHEMA_VERSION:
         conn.executescript(SCHEMA)
+        _migrate(conn, version)
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         conn.commit()
     return conn
+
+
+def _migrate(conn, version):
+    if 0 < version < 2:
+        have = {r[1] for r in conn.execute("PRAGMA table_info(games)")}
+        for col, kind in [("meta_refreshed_at", "TEXT"), ("last_visits", "INTEGER"),
+                          ("last_favorites", "INTEGER")]:
+            if col not in have:
+                conn.execute(f"ALTER TABLE games ADD COLUMN {col} {kind}")
+        # Games refreshed before v2 had their details fetched then.
+        conn.execute("UPDATE games SET meta_refreshed_at = last_refreshed_at WHERE meta_refreshed_at IS NULL")
+        conn.execute("""UPDATE games SET
+            last_visits = (SELECT visits FROM snapshots s WHERE s.universe_id = games.universe_id ORDER BY ts DESC LIMIT 1),
+            last_favorites = (SELECT favorites FROM snapshots s WHERE s.universe_id = games.universe_id ORDER BY ts DESC LIMIT 1)""")
+        conn.execute("""INSERT OR REPLACE INTO daily
+            SELECT universe_id, substr(ts, 1, 10), MAX(playing), MAX(visits) FROM snapshots GROUP BY 1, 2""")
+
+
+def compact(conn, keep_snapshot_days=8, keep_sort_days=3, keep_search_days=2):
+    """Prune raw rows that the daily table already summarises, so the database stays small."""
+    t = now()
+    conn.execute("DELETE FROM snapshots WHERE ts < ?", (iso(t - dt.timedelta(days=keep_snapshot_days)),))
+    conn.execute("DELETE FROM sort_hits WHERE ts < ?", (iso(t - dt.timedelta(days=keep_sort_days)),))
+    conn.execute("DELETE FROM search_hits WHERE ts < ?", (iso(t - dt.timedelta(days=keep_search_days)),))
+    conn.commit()
