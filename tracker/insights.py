@@ -159,14 +159,19 @@ class Insights:
         return out
 
     def big_share(self, uids):
-        total = big = 0
+        """Share of the wave's players in games by big studios, or None while too few creators are known."""
+        total = big = known = 0
         for u in uids:
             p = self.R.playing(u)
             total += p
             ci = self.proxies(u).get("creator")
-            if ci and ci["big"]:
-                big += p
-        return (big / total) if total else None
+            if ci:
+                known += p
+                if ci["big"]:
+                    big += p
+        if not total or known < 0.5 * total:
+            return None
+        return big / known
 
     # ---- opportunities -----------------------------------------------------------------
 

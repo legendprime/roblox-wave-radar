@@ -1,5 +1,5 @@
 # Ledger: Roblox Trend Tracker
-_Updated 2026-11-08 07:35 by Claude Code (Opus 5.5)_ · **Status:** working
+_Updated 2026-11-08 07:55 by Claude Code (Opus 5.5)_ · **Status:** idle
 
 ## Goal
 Wave radar (2026-11-08): spot Roblox waves as they start (Just starting → Jump in now → Crowded → Fading) and show opportunities on a dashboard, running on GitHub Actions (user chose GitHub; nothing runs on their Mac).
@@ -35,8 +35,9 @@ Original goal: Collect daily data on Roblox games (charts + lineage-style search
 - Website (user asked for an app, chose a self-updating public website): tracker/site.py builds site/index.html (data inlined, no external libs) each run; workflow deploys it with GitHub Pages (upload-pages-artifact@v3 + deploy-pages@v4, environment github-pages). Repo must go public on free GitHub (user accepted); commit email legendprim3@gmail.com is already public via their demoapp repo.
 - Done: repo made public (gh repo edit --accept-visibility-change-consequences; gg visibility lacks that flag), Pages enabled (build_type=workflow). Run 42475925907 published the site; checked in the browser pane: tabs, cards, icons, expand list, lone breakouts, search filter, no console errors.
 - Done (all 6 improvement groups, user said 'build all'): schema v4 (badges, badge_fetch, creators, updates, wave_days, copy_stage); tracker/enrich.py (badges daily + creators weekly for ~170 key games, 150s budget, most important first); tracker/insights.py (mechanics from keywords, stand-ins: visits/player from top badge, minutes/visit, like %, favs/1K, update rhythm; winners vs flops; opportunity score; rising; chart entries; your games; track record + timelines; wave-forming alerts); site rebuilt with Top opportunities, Your games, 9 tabs. 17 tests pass; all tabs render in a Node DOM smoke test. Grouping stays title-based (description grouping too noisy); descriptions feed mechanics instead.
-- Now: push, cloud run, verify the live site.
-- Next: watch the first day of cloud runs (growth/trend numbers appear after ~24h); tune [radar] thresholds if stages look off; user may want concept ideas for an open wave.
+- Cloud run 42480677973 OK (17 min, throttled search 5/44, badges 167 games, 8 creators); new site checked in the browser pane (opportunities, your games, tabs, wave card facts, winners vs flops, mechanics table). Follow-up fixes: retry missing icons after 6h, big-studio share shown only when creators cover >=50% of players, 'just starting' alerts need >=1 successful copy (issue #9 'riders' went out before this rule), workflow timeout 30 min.
+- Now: nothing running locally; cloud radar + site every 3h at :17 UTC.
+- Next: after ~24h check Rising fastest / visits-per-day fill in; after ~14 days read the Track record tab and tune [radar] thresholds from it; creators fill in over ~1 day.
 
 ## In flight
 - none
@@ -45,6 +46,7 @@ Original goal: Collect daily data on Roblox games (charts + lineage-style search
 - none
 
 ## Log
+- 2026-11-08 07:55 Claude Code: live site verified; icon retry, big-share coverage, starting-alert rule.
 - 2026-11-08 07:35 Claude Code: insights, enrichment, track record, new site sections.
 - 2026-11-08 06:50 Claude Code: website live at legendprime.github.io/roblox-wave-radar, verified.
 - 2026-11-08 06:30 Claude Code: interactive website + Pages deploy step.

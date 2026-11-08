@@ -27,7 +27,7 @@ concurrency:
 jobs:
   radar:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30   # worst case with every time budget used is about 21 minutes
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

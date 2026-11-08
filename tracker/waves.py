@@ -385,7 +385,9 @@ class Radar:
                                   (stage_runs, ts, w["key"]))
             w["stage_runs"] = stage_runs
             already = row["alerted_stage"] if row else None
-            loud_enough = w["stage"] == "jump" or w["leader_playing"] >= r["alert_starting_min_leader"]
+            # A "just starting" wave whose copies all flopped isn't worth a ping yet.
+            copies_ok = w["hits"] >= 1 or w["eligible"] == 0
+            loud_enough = w["stage"] == "jump" or (w["leader_playing"] >= r["alert_starting_min_leader"] and copies_ok)
             steady = stage_runs >= r["alert_min_stage_runs"]
             if (w["stage"] in ("jump", "starting") and already != w["stage"] and loud_enough
                     and steady and warmed_up):

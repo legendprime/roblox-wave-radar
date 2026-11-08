@@ -369,9 +369,11 @@ def render_html(d, tables):
 
 def ensure_icons(conn, api, uids, log=print):
     stale = iso(now() - dt.timedelta(days=7))
+    retry = iso(now() - dt.timedelta(hours=6))   # Roblox sometimes has no icon ready yet; ask again soon
     need = [r[0] for r in conn.execute(
-        "SELECT universe_id FROM games WHERE universe_id IN (%s) AND (icon_url IS NULL OR icon_fetched_at < ?)"
-        % ",".join(str(int(u)) for u in uids), (stale,))] if uids else []
+        "SELECT universe_id FROM games WHERE universe_id IN (%s) AND (icon_fetched_at IS NULL OR icon_fetched_at < ?"
+        " OR (icon_url IS NULL AND icon_fetched_at < ?))"
+        % ",".join(str(int(u)) for u in uids), (stale, retry))] if uids else []
     if not need:
         return
     try:
