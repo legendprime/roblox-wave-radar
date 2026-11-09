@@ -1,5 +1,5 @@
 # Ledger: Roblox Trend Tracker
-_Updated 2026-11-08 07:55 by Claude Code (Opus 5.5)_ · **Status:** idle
+_Updated 2026-11-09 11:10 by Claude Code (Opus 5.5)_ · **Status:** idle
 
 ## Goal
 Wave radar (2026-11-08): spot Roblox waves as they start (Just starting → Jump in now → Crowded → Fading) and show opportunities on a dashboard, running on GitHub Actions (user chose GitHub; nothing runs on their Mac).
@@ -37,6 +37,7 @@ Original goal: Collect daily data on Roblox games (charts + lineage-style search
 - Done (all 6 improvement groups, user said 'build all'): schema v4 (badges, badge_fetch, creators, updates, wave_days, copy_stage); tracker/enrich.py (badges daily + creators weekly for ~170 key games, 150s budget, most important first); tracker/insights.py (mechanics from keywords, stand-ins: visits/player from top badge, minutes/visit, like %, favs/1K, update rhythm; winners vs flops; opportunity score; rising; chart entries; your games; track record + timelines; wave-forming alerts); site rebuilt with Top opportunities, Your games, 9 tabs. 17 tests pass; all tabs render in a Node DOM smoke test. Grouping stays title-based (description grouping too noisy); descriptions feed mechanics instead.
 - Cloud run 42480677973 OK (17 min, throttled search 5/44, badges 167 games, 8 creators); new site checked in the browser pane (opportunities, your games, tabs, wave card facts, winners vs flops, mechanics table). Follow-up fixes: retry missing icons after 6h, big-studio share shown only when creators cover >=50% of players, 'just starting' alerts need >=1 successful copy (issue #9 'riders' went out before this rule), workflow timeout 30 min.
 - Done: ragdoll concept brainstorm → analysis/2026-11-08-ragdoll-concepts.md (1. Build a Ragdoll 14/16, 2. Steal a Ragdoll 12/16, 3. Ragdoll Hospital 11/16).
+- Done: Grow Food For Animals review → analysis/2026-11-09-grow-food-for-animals.md (same concept flopped twice: Launch Food For Animals, Bait an Animal; title reads as Throw Food; plan: size is the prize, new name, rares go to the best garden, simpler first 10 min, ship in ~2 weeks; night stealing is the user's call). Implementation belongs in the game's own folder.
 - Now: nothing running locally; cloud radar + site every 3h at :17 UTC.
 - Next: after ~24h check Rising fastest / visits-per-day fill in; after ~14 days read the Track record tab and tune [radar] thresholds from it; creators fill in over ~1 day.
 
@@ -47,6 +48,7 @@ Original goal: Collect daily data on Roblox games (charts + lineage-style search
 - none
 
 ## Log
+- 2026-11-09 11:10 Claude Code: Grow Food For Animals breakout review (analysis/2026-11-09-grow-food-for-animals.md).
 - 2026-11-08 08:05 Claude Code: ragdoll concepts (analysis/2026-11-08-ragdoll-concepts.md); top pick Build a Ragdoll.
 - 2026-11-08 07:55 Claude Code: live site verified; icon retry, big-share coverage, starting-alert rule.
 - 2026-11-08 07:35 Claude Code: insights, enrichment, track record, new site sections.
