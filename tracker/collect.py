@@ -105,6 +105,13 @@ def run_collect(conn, cfg, api, log=print):
         f"{len(seen)} distinct games seen this run")
 
     conn.executemany("INSERT OR IGNORE INTO sort_hits VALUES (?,?,?,?,?,?,?,?)", sort_rows)
+    keep = set(c["chart_history"])
+    for (_, _, sort_id, _, pos, uid, playing, _) in sort_rows:
+        if sort_id in keep:
+            conn.execute(
+                """INSERT INTO chart_days VALUES (?,?,?,?,?) ON CONFLICT (sort_id, day, universe_id) DO UPDATE SET
+                   playing = CASE WHEN excluded.best_pos < best_pos THEN excluded.playing ELSE playing END,
+                   best_pos = MIN(best_pos, excluded.best_pos)""", (sort_id, day, uid, pos, playing))
     conn.executemany("INSERT OR IGNORE INTO search_hits VALUES (?,?,?,?,?,?,?)", search_rows)
 
     # 3. Register games ---------------------------------------------------

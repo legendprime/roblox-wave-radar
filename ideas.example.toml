@@ -1,0 +1,22 @@
+# Your private idea list. Copy this file to ideas.toml (ignored by git, so it never reaches the
+# public repository or website), then run:   python3 -m tracker ideas
+#
+# For each idea the radar searches Roblox, keeps the games whose TITLES match, and tells you whether
+# the lane is open. It remembers the last check and flags any game that has appeared since.
+#
+#   name     what you call the idea
+#   queries  what a player would type into Roblox search (one search each)
+#   match    every entry must be found in a game's title (regular expressions, lower case).
+#            Leave it out and a title must contain every word of the first query.
+#   proof    why you believe it works: the proven game elsewhere, the Roblox wave it rides
+
+[[idea]]
+name = "Example: tower defense with pets"
+queries = ["pet tower defense", "pets td"]
+match = ["pet", "tower defen|\\btd\\b"]
+proof = "Tower defense earns far more per player than tycoons; pets are the most collected thing on Roblox."
+
+[[idea]]
+name = "Example: underwater treasure diving"
+queries = ["treasure diving"]
+proof = "Dig/mine loops are proven; nobody has moved the loop underwater."

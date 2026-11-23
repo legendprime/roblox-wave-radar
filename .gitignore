@@ -48,3 +48,8 @@ credentials.yaml
 
 # Built by the radar each run and published with GitHub Pages
 site/
+
+# Private: your own game ideas and idea research. The repository and the radar website are public.
+ideas.toml
+analysis/private/
+.claude/launch.json

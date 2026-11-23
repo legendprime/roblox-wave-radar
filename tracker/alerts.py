@@ -39,6 +39,21 @@ def compose(alert, radar, repo, notify):
             body.append("- Doing best after it: " + " · ".join(
                 f"{link(u)} {compact(radar.playing(u))}" for u in w["best"][:3]))
         body.append(f"- {w['n']} games so far, {w['n7']} new this week · genre: {w['genre']}")
+    elif alert["kind"] == "money":
+        r, st = alert["row"], alert.get("store")
+        name = radar.games[r["uid"]]["name"]
+        title = f"💰 New money-maker: {name} reached #{r['pos']} on Top Earning at {fmt_days(r['age'])} old"
+        body = [f"{link(r['uid'])} just showed up on Roblox's **Top Earning** chart at **#{r['pos']}** with "
+                f"{compact(r['playing'])} playing, {fmt_days(r['age'])} after it was made.", ""]
+        if r["typical"] and r["multiple"]:
+            body.append(f"- Games around that rank typically have {compact(r['typical'])} players, so it earns about "
+                        f"**{r['multiple']}× the usual amount per player**.")
+        body.append(f"- Type: {r['type']}")
+        if st and st["n"]:
+            body.append(f"- Store: {st['n']} things for sale, up to {st['max']:,} Robux. Mostly: "
+                        + ", ".join(c["name"] for c in st["cats"][:3]) + ".")
+            body.append("- Priciest: " + " · ".join(f"{i['name']} ({i['price']:,})" for i in st["top"][:4]))
+        body += ["", "A young game earning this much is worth opening: look at what it sells and how early it asks."]
     elif alert["kind"] == "forming":
         x = alert["lone"]
         name = radar.games[x["uid"]]["name"]

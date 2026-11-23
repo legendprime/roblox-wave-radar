@@ -20,6 +20,8 @@ queries = [
   "tycoon", "simulator", "incremental", "idle", "rng", "merge", "brainrot",
   # current non-tycoon risers worth watching for loops to borrow
   "dont splash", "survive", "escape",
+  # families the Money tab pointed at (2026-11-23): shop sims, card opening, "you are the creature"
+  "run a", "my shop", "card opening", "playground", "be a",
 ]
 
 # Keep refreshing a game while it has at least this many players, or while it
@@ -37,6 +39,12 @@ notify = true
 notify_max_age_days = 60
 # ...that cross one of these thresholds.
 notify_thresholds = [10000, 100000, 1000000]
+
+# The Money tab: reads Roblox's Top Earning chart against player counts. Defaults shown.
+[money]
+small_max_playing = 15000   # "small games that earn big" have at most this many players
+young_days = 120            # "young games already on the earning chart"
+alert_max_age_days = 60     # alert when a game this young first reaches the earning chart
 
 [report]
 breakout_max_age_days = 45   # "new game" window for the breakout list

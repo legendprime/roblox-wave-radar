@@ -69,6 +69,49 @@ def run(conn, cfg, api, key_games, log=print):
         + (f" ({left_b} badge and {left_c} creator lookups continue next run)" if left_b or left_c else ""))
 
 
+def run_store(conn, cfg, api, uids, log=print):
+    """Look up what the money games sell (passes + paid products with prices). `uids` come most
+    important first; games never looked up go before weekly refreshes. Stops at its time budget."""
+    e = cfg["enrich"]
+    t0 = time.monotonic()
+    ts = iso(now())
+    cut = iso(now() - dt.timedelta(days=e["store_refresh_days"]))
+    fetched = {r[0]: r[1] for r in conn.execute("SELECT universe_id, fetched_at FROM store_fetch")}
+    todo = [u for u in uids if u not in fetched] + sorted((u for u in uids if u in fetched and fetched[u] < cut),
+                                                          key=lambda u: fetched[u])
+    done = fails = 0
+    retries, api.retries = api.retries, 1     # a throttled lookup is skipped, not waited out
+    try:
+        for uid in todo:
+            if time.monotonic() - t0 > e["store_budget_s"] or fails >= 3:
+                break
+            try:
+                passes, more_p = api.game_passes(uid)
+                products, more_d = api.dev_products(uid)
+            except ApiError as ex:
+                fails += 1
+                log(f"  ! store {uid}: {ex}")
+                continue
+            rows = [(uid, "pass", x.get("id"), x.get("displayName") or x.get("name"), x.get("displayDescription"),
+                     x.get("price"), norm_iso(x.get("created"))) for x in passes if x.get("id") and x.get("isForSale")]
+            rows += [(uid, "product", x.get("DeveloperProductId"), x.get("displayName") or x.get("Name"),
+                      x.get("displayDescription") or x.get("Description"), x.get("PriceInRobux"),
+                      norm_iso(x.get("Created"))) for x in products if x.get("DeveloperProductId") and x.get("IsForSale")]
+            conn.execute("DELETE FROM store_items WHERE universe_id = ?", (uid,))
+            conn.executemany("INSERT OR REPLACE INTO store_items VALUES (?,?,?,?,?,?,?)", rows)
+            conn.execute("INSERT OR REPLACE INTO store_fetch VALUES (?,?,?,?,?)",
+                         (uid, ts, sum(1 for r in rows if r[1] == "pass"), sum(1 for r in rows if r[1] == "product"),
+                          int(more_p or more_d)))
+            done += 1
+    finally:
+        api.retries = retries
+    conn.commit()
+    left = len(todo) - done
+    log(f"stores: looked up {done} games in {time.monotonic() - t0:.0f}s"
+        + (f" ({left} continue next run)" if left > 0 else ""))
+    return done
+
+
 # ---- reading it back -------------------------------------------------------------------
 
 def badge_summary(conn, uid, visits, t):

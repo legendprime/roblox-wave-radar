@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 DB_PATH = Path(os.environ.get("TRACKER_DB") or DATA_DIR / "tracker.sqlite")
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -130,6 +130,36 @@ CREATE TABLE IF NOT EXISTS copy_stage (
   stage TEXT,
   created_at TEXT,
   recorded_at TEXT
+);
+
+-- Best position per day on the charts worth keeping (Top Earning). Raw chart rows are pruned
+-- after 3 days; this stays, so "how long has it been earning" survives.
+CREATE TABLE IF NOT EXISTS chart_days (
+  sort_id TEXT NOT NULL,
+  day TEXT NOT NULL,
+  universe_id INTEGER NOT NULL,
+  best_pos INTEGER,
+  playing INTEGER,             -- players when it held that position
+  PRIMARY KEY (sort_id, day, universe_id)
+) WITHOUT ROWID;
+
+-- What the money games sell: game passes and paid products with prices (public; latest fetch only).
+CREATE TABLE IF NOT EXISTS store_items (
+  universe_id INTEGER NOT NULL,
+  kind TEXT NOT NULL,          -- pass | product
+  item_id INTEGER NOT NULL,
+  name TEXT,
+  description TEXT,
+  price INTEGER,
+  created TEXT,
+  PRIMARY KEY (universe_id, kind, item_id)
+) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS store_fetch (
+  universe_id INTEGER PRIMARY KEY,
+  fetched_at TEXT,
+  n_passes INTEGER,
+  n_products INTEGER,
+  more INTEGER                 -- 1 = the game has more products than were fetched
 );
 
 CREATE TABLE IF NOT EXISTS alerts_log (
@@ -301,6 +331,13 @@ def _migrate(conn, version):
         have = {r[1] for r in conn.execute("PRAGMA table_info(wave_state)")}
         if "stage_runs" not in have:
             conn.execute("ALTER TABLE wave_state ADD COLUMN stage_runs INTEGER NOT NULL DEFAULT 1")
+    if 0 < version < 5:
+        # Start the chart history from the raw chart rows still on hand (the last 3 days).
+        conn.execute("""INSERT OR IGNORE INTO chart_days
+            SELECT h.sort_id, substr(h.ts, 1, 10), h.universe_id, MIN(h.position),
+                   (SELECT x.playing FROM sort_hits x WHERE x.sort_id = h.sort_id AND x.universe_id = h.universe_id
+                      AND substr(x.ts, 1, 10) = substr(h.ts, 1, 10) ORDER BY x.position LIMIT 1)
+            FROM sort_hits h WHERE h.sort_id = 'top-earning' GROUP BY 1, 2, 3""")
 
 
 def compact(conn, keep_snapshot_days=8, keep_sort_days=3, keep_search_days=2):

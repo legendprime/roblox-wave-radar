@@ -170,6 +170,35 @@ class Api:
         data = self.get(f"https://friends.roblox.com/v1/users/{int(user_id)}/followers/count")
         return data.get("count")
 
+    def game_passes(self, universe_id, max_pages=2):
+        """A game's passes with prices (public store listing)."""
+        out, token = [], None
+        for _ in range(max_pages):
+            params = {"passView": "Full", "pageSize": 100}
+            if token:
+                params["pageToken"] = token
+            data = self.get(f"https://apis.roblox.com/game-passes/v1/universes/{int(universe_id)}/game-passes", params)
+            out.extend(data.get("gamePasses") or [])
+            token = data.get("nextPageToken")
+            if not token:
+                break
+        return out, bool(token)
+
+    def dev_products(self, universe_id, max_pages=3):
+        """A game's paid products (currency packs, rolls, skips...) with prices. Returns (items, more_exist)."""
+        out, cursor = [], None
+        for _ in range(max_pages):
+            params = {"limit": 100}
+            if cursor:
+                params["cursor"] = cursor
+            data = self.get(f"https://apis.roblox.com/developer-products/v2/universes/{int(universe_id)}/developerproducts",
+                            params)
+            out.extend(data.get("developerProducts") or [])
+            cursor = data.get("nextPageCursor")
+            if not cursor:
+                break
+        return out, bool(cursor)
+
     def universe_for_place(self, place_id):
         data = self.get(PLACE_TO_UNIVERSE.format(int(place_id)))
         return data.get("universeId")

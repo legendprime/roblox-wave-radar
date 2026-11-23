@@ -10,6 +10,7 @@ It runs **in the cloud on GitHub every 3 hours**. Nothing runs on your computer.
   - **⭐ Top opportunities:** ranked, with the reasons for each.
   - **🧑‍💻 Your games:** which wave each one is in, and that wave's stage.
   - **Tabs:**
+    - 💰 Money: which young and small games are on Roblox's Top Earning chart, how much more they earn per player than usual, and what each one sells (see below)
     - 🟢 Jump in now · 🌱 Just starting · 🔴 Crowded
     - 👀 Lone breakouts (🌊 marks one that just got its first lookalikes)
     - 🚀 Rising fastest · 📈 New on charts
@@ -19,8 +20,27 @@ It runs **in the cloud on GitHub every 3 hours**. Nothing runs on your computer.
 - **Plain-text version:** this repo's [`radar` branch](../../tree/radar) (it opens as that branch's README).
 - **Alerts:** a GitHub issue labelled `wave-alert` opens (and GitHub notifies you) when:
   - a wave moves to 🟢 **Jump in now**,
-  - a big wave moves to 🌱 **Just starting**, or
-  - a game under 3 weeks old crosses 10K players with nothing like it around (a possible new wave).
+  - a big wave moves to 🌱 **Just starting**,
+  - a game under 3 weeks old crosses 10K players with nothing like it around (a possible new wave), or
+  - 💰 a game under 60 days old reaches the Top Earning chart for the first time (a new money-maker).
+
+## Money, not just players
+
+Player count and money are different things: on any day, several games with 1–5K players sit above 40K-player games on Roblox's **Top Earning** chart. Roblox doesn't publish revenue, but the chart's order is public, so the Money tab reads it against player counts:
+
+- **× the usual money per player:** the players that games around the same earning rank usually have, divided by this game's players. A game at #45 with 900 players, surrounded by games with 18K, earns about 20× the usual amount per player. It compares games; it isn't a Robux figure.
+- **Young games already on the earning chart:** made in the last 120 days. These show what can be built quickly and still earn.
+- **What they sell:** every game's passes and paid products are public, with prices. The radar reads them weekly and shows how many things are for sale, the priciest items, and the kinds (random rolls, currency packs, boosts, VIP, limited items, gifting). It can't see how many were sold.
+- **Which kinds of game earn most per player:** the whole chart grouped by Roblox's sub-genre.
+
+## Checking your own ideas (private)
+
+```bash
+cp ideas.example.toml ideas.toml     # once; then put your ideas in ideas.toml
+python3 -m tracker ideas
+```
+
+For each idea it searches Roblox, keeps the games whose titles match, and says whether the lane is 🟢 open, 🟡 being tried, 🟠 or 🔴 taken. It remembers the last check and flags any game that appeared since, so you find out early when someone ships your idea. `ideas.toml` and the result (`reports/ideas.md`) are ignored by git: this repository and the website are public, so ideas never go in them. This is the one part that runs on your computer, and only when you ask.
 
 ## What the stages mean
 
@@ -67,6 +87,7 @@ To look at the cloud data locally, download `data/tracker.sqlite.gz` from the `r
 - The radar only sees games that show up in Roblox's charts or search. To find the small copies too, it adds each hot wave's words to its next searches.
 - Player counts are sampled every 3 hours, so a true peak can fall between samples.
 - Growth and trend numbers need a day or more of history before they appear.
+- The Money tab ranks games by Roblox's Top Earning order; it never knows actual Robux. A short burst (a sale, an event) can lift a game for a few days, so check how long it has been on the chart.
 - Grouping by title words is rough. Unrelated games that share a word can land together, and a wave whose games all have different names is only caught as lone breakouts.
 
 ## Files
@@ -74,6 +95,8 @@ To look at the cloud data locally, download `data/tracker.sqlite.gz` from the `r
 ```
 tracker/collect.py    one collection: charts + search + details for games that need them
 tracker/waves.py      groups games into waves, stages them, picks alerts
+tracker/money.py      Top Earning chart vs players, store summaries, new money-maker alerts
+tracker/ideas.py      private "is my idea taken?" check (reads ideas.toml, never committed)
 tracker/dashboard.py  DASHBOARD.md + waves.json
 tracker/alerts.py     GitHub issue alerts
 tracker/db.py         SQLite schema (raw snapshots kept ~8 days, daily peaks forever)

@@ -24,8 +24,8 @@ def growth(g):
 
 
 class Page:
-    def __init__(self, radar, conn, cfg):
-        self.R, self.conn, self.cfg = radar, conn, cfg
+    def __init__(self, radar, conn, cfg, money=None):
+        self.R, self.conn, self.cfg, self.M = radar, conn, cfg, money
         self.tz = ZoneInfo(cfg["radar"]["timezone"])
 
     def link(self, uid, icon=False):
@@ -64,6 +64,24 @@ class Page:
         lines.append(f"- **Genre:** {w['genre']}: {lineage}")
         lines.append(f"- **Why this stage:** {w['why']}")
         return "\n".join(lines)
+
+    def money_lines(self):
+        """Young games on Roblox's Top Earning chart, and what they sell."""
+        M = self.M
+        young = sorted(M.young(), key=lambda r: r["pos"])[:15] if M else []
+        if not young:
+            return []
+        out = ["## 💰 Young games already on the earning chart", "",
+               f"_Made in the last {M.m['young_days']} days and already among Roblox's top earners. \"Per player\" "
+               "compares a game's players with what games around the same earning rank usually have: 5× means it "
+               "earns like a game five times its size. The website's Money tab has every store in detail._", "",
+               "| Game | Earning rank | Playing | Per player | Age | Kind | Store |", "|---|---|---|---|---|---|---|"]
+        for r in young:
+            st = M.store(r["uid"])
+            store = (f"{st['n']} for sale, up to {st['max']:,} R$" if st and st["n"] else "—")
+            out.append(f"| {'🆕 ' if r['new'] else ''}{self.link(r['uid'], icon=True)} | #{r['pos']} | {compact(r['playing'])} | "
+                       f"{r['multiple']}× | {fmt_days(r['age'])} | {esc(r['type'])} | {store} |")
+        return out + [""]
 
     def render(self):
         R, r = self.R, self.cfg["radar"]
@@ -124,6 +142,8 @@ class Page:
         else:
             out.append("_None right now._")
         out.append("")
+
+        out += self.money_lines()
 
         crowded = sorted([w for w in by["crowded"] if w["total"] >= r["show_crowded_min_total"]
                           and (w["leader_age"] or 0) <= r["show_crowded_max_leader_age"]],
@@ -202,8 +222,8 @@ class Page:
                 "lone_breakouts": [g(x["uid"]) | {"copies": x["n_copies"]} for x in R.lone]}
 
 
-def write(radar, conn, cfg, log=print):
-    page = Page(radar, conn, cfg)
+def write(radar, conn, cfg, money=None, log=print):
+    page = Page(radar, conn, cfg, money)
     REPORTS.mkdir(exist_ok=True)
     md_path = REPORTS / "DASHBOARD.md"
     md_path.write_text(page.render(), encoding="utf-8")

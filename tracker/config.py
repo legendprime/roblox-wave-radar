@@ -18,6 +18,7 @@ DEFAULTS = {
         "details_budget_s": 480,
         "hot_queries_per_run": 6,
         "hot_search_pages": 2,
+        "chart_history": ["top-earning"],   # charts whose daily positions are kept forever
     },
     "radar": {
         "timezone": "America/New_York",
@@ -71,6 +72,18 @@ DEFAULTS = {
         "creator_refresh_days": 7,    # creators about once a week
         "key_games_limit": 200,
         "big_creator_members": 1000000,
+        "store_budget_s": 75,         # seconds per run for looking up what the money games sell
+        "store_refresh_days": 7,
+    },
+    "money": {
+        "chart": "top-earning",
+        "neighbours": 7,              # "typical players at this rank" = median of the 7 ranks either side
+        "small_max_playing": 15000,   # "small games that earn big" have at most this many players
+        "young_days": 120,
+        "new_days": 7,                # "new on the chart" = first seen on it in the last 7 days
+        "alert_max_age_days": 60,     # alert when a game this young first reaches the earning chart
+        "alert_min_chart_days": 3,    # ...once the chart history is at least this many days long
+        "max_alerts_per_run": 2,
     },
     "watch": [],
 }

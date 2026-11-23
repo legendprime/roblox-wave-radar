@@ -8,7 +8,7 @@ import time
 
 import json
 
-from . import alerts, collect, config, dashboard, db, enrich, insights, notify, predict, report, site, waves
+from . import alerts, collect, config, dashboard, db, enrich, ideas, insights, money, notify, predict, report, site, waves
 from . import api as api_mod
 
 
@@ -109,26 +109,37 @@ def cmd_radar(args, conn, cfg):
         conn.commit()
         found = radar.update_state() if not args.no_alerts else []
         # Key games get full details every run and daily badge/creator lookups.
-        key = insights.Insights(radar, conn, cfg).key_games(
-            insights.Insights(radar, conn, cfg).rising(), cfg["enrich"]["key_games_limit"])
+        first = insights.Insights(radar, conn, cfg)
+        key = first.key_games(first.rising(), cfg["enrich"]["key_games_limit"])
+        # Small and young games on the earning chart count as key games too.
+        earners = money.Money(radar, conn, cfg, first)
+        key += [u for u in earners.key_games() if u not in key]
         enrich.save_key_games(conn, key)
         if not (args.no_collect or args.no_enrich):
             enrich.run(conn, cfg, api, key, log=log)
-        report.ensure_icons(conn, api, site.site_games(radar, extra=key), log=log)
+            enrich.run_store(conn, cfg, api, earners.store_games(), log=log)
+        report.ensure_icons(conn, api, sorted(set(site.site_games(radar, extra=key)) | {r["uid"] for r in earners.rows()}),
+                            log=log)
         radar.games = waves.Radar(conn, cfg).games  # pick up icons
         ins = insights.Insights(radar, conn, cfg)
         ins.record_track()
+        mon = money.Money(radar, conn, cfg, ins)
         r = cfg["radar"]
         n_runs = conn.execute("SELECT COUNT(*) FROM runs WHERE status IN ('ok','partial')").fetchone()[0]
         warmed_up = n_runs >= r["alert_min_runs"] and len(radar.games) >= r["alert_min_games"] and not args.no_alerts
-        found = (found + ins.forming(warmed_up))[:r["max_alerts_per_run"]]
-        dashboard.write(radar, conn, cfg, log=log)
-        site.write(radar, conn, cfg, ins, log=log)
+        found = (found + ins.forming(warmed_up))[:r["max_alerts_per_run"]] + mon.alerts(warmed_up)
+        dashboard.write(radar, conn, cfg, mon, log=log)
+        site.write(radar, conn, cfg, ins, mon, log=log)
         alerts.send(conn, radar, found, log=log)
         if args.vacuum:
             conn.execute("VACUUM")
         counts = {s: sum(1 for w in radar.waves if w["stage"] == s) for s in waves.STAGES}
         log(f"waves: {counts}; lone breakouts {len(radar.lone)}; done in {time.monotonic() - t0:.0f}s")
+
+
+def cmd_ideas(args, conn, cfg):
+    """Private check: are your game ideas already on Roblox? Reads ideas.toml (kept out of git)."""
+    return ideas.run(conn, api_mod.Api(log=log), args.file, log=log)
 
 
 def cmd_report(args, conn, cfg):
@@ -315,6 +326,8 @@ def main(argv=None):
     s.add_argument("--within-days", type=int, help="...or within N days of the game's creation")
     s.add_argument("--prob", type=float, help="your probability, 0-1, e.g. 0.3")
     s.add_argument("--note")
+    s = sub.add_parser("ideas", help="check whether your game ideas (ideas.toml, private) are already on Roblox")
+    s.add_argument("--file", default=None, help="idea list to read (default: ideas.toml next to config.toml)")
     s = sub.add_parser("export", help="write all games to a CSV")
     s.add_argument("--out")
 

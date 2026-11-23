@@ -15,8 +15,8 @@ def _num(x, nd=3):
 
 
 class SiteData:
-    def __init__(self, radar, conn, cfg, insights):
-        self.R, self.conn, self.cfg, self.I = radar, conn, cfg, insights
+    def __init__(self, radar, conn, cfg, insights, money=None):
+        self.R, self.conn, self.cfg, self.I, self.M = radar, conn, cfg, insights, money
         self.days = [(radar.t - dt.timedelta(days=d)).strftime("%Y-%m-%d") for d in range(SPARK_DAYS - 1, -1, -1)]
 
     def game(self, uid, rich=False):
@@ -70,6 +70,26 @@ class SiteData:
                 out["score_why"] = I.wave_score(w)[1]
         return out
 
+    def money(self):
+        """The Money tab: young and small games on the earning chart, with what they sell."""
+        M = self.M
+        rows = M.rows() if M else []
+        if not rows:
+            return None
+        keys = ("pos", "typical", "multiple", "first_day", "days_on", "best", "new", "type")
+
+        def card(r):
+            return self.game(r["uid"], rich=True) | {k: r[k] for k in keys} | {"store": M.store(r["uid"])}
+        young = {r["uid"] for r in M.young()}
+        return {
+            "chart_start": M.start, "history_days": M.history_days,
+            "small_max": M.m["small_max_playing"], "young_days": M.m["young_days"], "new_days": M.m["new_days"],
+            "young": [card(r) for r in sorted(M.young(), key=lambda r: r["pos"])],
+            "small": [card(r) for r in M.small() if r["uid"] not in young][:25],
+            "types": [t | {"top": [self.game(u) for u in t["top"]]} for t in M.by_type()],
+            "all": [self.game(r["uid"]) | {k: r[k] for k in keys} for r in rows],
+        }
+
     def build(self):
         R, I, r = self.R, self.I, self.cfg["radar"]
         tz = ZoneInfo(r["timezone"])
@@ -113,11 +133,12 @@ class SiteData:
             "big_members": self.cfg["enrich"]["big_creator_members"],
             "opportunities": opps, "waves": show, "lone": lone, "rising": rising, "charts": charts,
             "mine": mine, "mechanics": mech, "track": I.track_record(), "timelines": I.timelines(),
+            "money": self.money(),
         }
 
 
-def write(radar, conn, cfg, insights, log=print):
-    data = SiteData(radar, conn, cfg, insights).build()
+def write(radar, conn, cfg, insights, money=None, log=print):
+    data = SiteData(radar, conn, cfg, insights, money).build()
     SITE.mkdir(exist_ok=True)
     blob = json.dumps(data, separators=(",", ":"), default=str)
     (SITE / "waves.json").write_text(blob, encoding="utf-8")
@@ -256,11 +277,23 @@ td.wrap{white-space:normal;min-width:200px}
 .s-fading{background:var(--fade)}.s-watching{background:var(--line)}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin:6px 0 12px}
 .legend i{width:12px;height:12px;border-radius:3px;display:inline-block;vertical-align:-1px;margin-right:4px}
+.mcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+.mcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow);min-width:0}
+.mcard .head{display:flex;gap:12px;align-items:flex-start;min-width:0}
+.mcard .head img,.mcard .head .ph{width:52px;height:52px;border-radius:11px;flex:none;background:var(--line);object-fit:cover}
+.mcard .name{font-weight:650;word-break:break-word;line-height:1.3}
+.mcard .stats{grid-template-columns:repeat(2,minmax(0,1fr));margin:12px 0 8px}
+.rank{display:inline-block;font-size:12.5px;font-weight:650;border-radius:999px;padding:3px 10px;white-space:nowrap;
+  color:var(--jump);background:var(--jump-bg);flex:none}
+.pricey{margin:8px 0 0;padding-left:18px;font-size:13.5px;color:var(--muted)}
+.pricey b{color:var(--ink);font-variant-numeric:tabular-nums}
+.sortrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 12px;font-size:14px;color:var(--muted)}
+.sortrow select{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:5px 8px;font:inherit;font-size:14px}
 .empty{color:var(--muted);font-style:italic;padding:12px 0}
 footer{margin-top:40px;color:var(--muted);font-size:13.5px;border-top:1px solid var(--line);padding-top:18px}
 footer h3{color:var(--ink);font-size:15px;margin:14px 0 8px}
 footer ul{margin:0 0 12px;padding-left:18px}
-@media (max-width:560px){ header h1{font-size:22px} .card h3{font-size:19px} .chip .t{max-width:150px} .opps{grid-template-columns:1fr} }
+@media (max-width:560px){ header h1{font-size:22px} .card h3{font-size:19px} .chip .t{max-width:150px} .opps{grid-template-columns:1fr} .mcards{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
@@ -290,7 +323,9 @@ footer ul{margin:0 0 12px;padding-left:18px}
 var D = JSON.parse(document.getElementById("data").textContent) || {};
 ["opportunities","waves","lone","rising","charts","mine","mechanics","timelines"].forEach(function(k){ D[k] = D[k] || []; });
 D.track = D.track || {stages:[]};
+var M = D.money || {young:[], small:[], types:[], all:[]};
 var TABS = [
+  {id:"money", name:"Money", emoji:"💰", intro:"Roblox doesn't publish revenue, but it does publish the Top Earning chart in order. Comparing each game's players with what games around the same earning rank usually have shows who earns far more per player than normal. Small, young games here are the ones to study when the goal is money, not player count: open their stores and see what they sell."},
   {id:"jump", name:"Jump in now", emoji:"🟢", intro:"Copies with a twist are succeeding and it isn't crowded yet. This is the window, and it lasts weeks, not months."},
   {id:"starting", name:"Just starting", emoji:"🌱", intro:"A young game is breaking out and only a few copies exist. If the copies start succeeding, it moves to Jump in now."},
   {id:"lone", name:"Lone breakouts", emoji:"👀", intro:"Young games pulling big numbers with no wave around them yet. The next wave usually starts as one of these. 🌊 marks one that just got its first lookalikes."},
@@ -468,6 +503,83 @@ function loneTile(g){
     facts(g)));
 }
 
+function robux(n){ return n == null ? "—" : Math.round(n).toLocaleString() + " R$"; }
+function perPlayer(g){ return g.multiple == null ? "—" : (g.multiple >= 10 ? Math.round(g.multiple) : g.multiple) + "×"; }
+function storeLine(s){
+  if (!s) return "Store not read yet (fills in over the next checks)";
+  if (!s.n) return "Nothing for sale found";
+  return s.n + (s.more ? "+" : "") + " things for sale (" + s.passes + " passes, " + s.products + " products)" + (s.gifting ? " · gifting to friends" : "");
+}
+function moneyCard(g){
+  var s = g.store;
+  var onChart = g.days_on ? "on the chart " + g.days_on + (g.days_on === 1 ? " day" : " days") + " tracked" + (g.best && g.best < g.pos ? " (best #" + g.best + ")" : "") : "";
+  return h("article", {cls:"mcard"},
+    h("div", {cls:"head"}, link(g, icon(g)), h("div", {style:"min-width:0;flex:1"},
+      h("div", {cls:"row", style:"justify-content:space-between;gap:8px;align-items:flex-start"},
+        link(g, h("div", {cls:"name", text:(g["new"] ? "🆕 " : "") + g.name})), h("span", {cls:"rank", text:"#" + g.pos + " earning"})),
+      h("div", {cls:"sub", text:fmt(g.playing) + " playing · " + days(g.age) + " old · " + (g.genre || g.type || "")}),
+      onChart ? h("div", {cls:"sub", text:onChart}) : null)),
+    h("div", {cls:"stats"},
+      h("div", {cls:"stat", title:"Players that games around this earning rank usually have, divided by this game's players."},
+        h("div", {cls:"v", text:perPlayer(g)}), h("div", {cls:"k", text:"the usual money per player"})),
+      h("div", {cls:"stat"}, h("div", {cls:"v", text:fmt(g.typical)}), h("div", {cls:"k", text:"players usually needed at this rank"})),
+      h("div", {cls:"stat"}, h("div", {cls:"v", text:s && s.n ? s.n + (s.more ? "+" : "") : "—"}), h("div", {cls:"k", text:"things for sale"})),
+      h("div", {cls:"stat"}, h("div", {cls:"v", text:s && s.max ? robux(s.max) : "—"}), h("div", {cls:"k", text:"priciest item" + (s && s.median ? " · typical " + robux(s.median) : "")}))),
+    h("div", {cls:"sub", text:storeLine(s)}),
+    s && s.cats && s.cats.length ? h("div", {cls:"tags", style:"margin-top:8px"}, s.cats.map(function(c){
+      return h("span", {cls:"tag", title:c.n + " items, up to " + robux(c.max), text:c.name + " · " + c.n}); })) : null,
+    s && s.top && s.top.length ? h("ul", {cls:"pricey"}, s.top.slice(0, 4).map(function(i){ return h("li", null, h("b", {text:robux(i.price)}), " " + i.name); })) : null,
+    g.mech && g.mech.length ? h("div", {cls:"tags", style:"margin-top:8px"}, g.mech.slice(0, 4).map(function(m){ return h("span", {cls:"tag", text:m}); })) : null,
+    facts(g));
+}
+function moneyTable(list){
+  return table([{t:"Game"},{t:"Earning rank",num:1},{t:"Playing",num:1},{t:"Usual players at that rank",num:1},{t:"Per player",num:1},{t:"Age",num:1},{t:"Type"}],
+    list.map(function(g){
+      return h("tr", null, gameCell(g), h("td", {cls:"num", text:"#" + g.pos}), h("td", {cls:"num", text:fmt(g.playing)}),
+        h("td", {cls:"num", text:fmt(g.typical)}), h("td", {cls:"num", text:perPlayer(g)}), h("td", {cls:"num", text:days(g.age)}),
+        h("td", {text:g.genre || g.type || "—"}));
+    }));
+}
+var moneySort = "pos";
+function renderMoney(list){
+  var young = M.young.filter(gameMatches), small = M.small.filter(gameMatches);
+  if (M.history_days < 3) list.appendChild(h("p", {cls:"note", text:"The earning chart has been recorded for " + (M.history_days || 0) + " day(s). “New on the chart” (🆕) and days-on-chart fill in from here."}));
+  list.appendChild(h("h2", {cls:"sec", style:"margin-top:4px", text:"Young games already on the earning chart"}));
+  list.appendChild(h("p", {cls:"section-intro", text:"Made in the last " + M.young_days + " days and already among Roblox's top earners. These show what can be built and start earning quickly. 🆕 = first reached the chart in the last " + M.new_days + " days."}));
+  var sel = h("select", {"aria-label":"Sort young earners", on:{change:function(e){ moneySort = e.target.value; render(); }}},
+    [["pos","Earning rank"],["multiple","Money per player"],["age","Newest first"],["playing","Fewest players"]].map(function(o){
+      return h("option", {value:o[0], selected:moneySort === o[0] ? "selected" : null, text:o[1]}); }));
+  list.appendChild(h("div", {cls:"sortrow"}, "Sort by", sel));
+  young.sort(function(a, b){
+    if (moneySort === "multiple") return (b.multiple || 0) - (a.multiple || 0);
+    if (moneySort === "age") return (a.age || 0) - (b.age || 0);
+    if (moneySort === "playing") return (a.playing || 0) - (b.playing || 0);
+    return a.pos - b.pos;
+  });
+  list.appendChild(young.length ? h("div", {cls:"mcards"}, young.map(moneyCard)) : h("p", {cls:"empty", text:"No young games on the earning chart match."}));
+  list.appendChild(h("h2", {cls:"sec", text:"Older small games that earn big"}));
+  list.appendChild(h("p", {cls:"section-intro", text:"Over " + M.young_days + " days old, at most " + fmt(M.small_max) + " players, most money per player first. Usually a loyal niche (car culture, sports, roleplay towns, fighting) with a deep store."}));
+  list.appendChild(small.length ? h("div", {cls:"mcards"}, small.map(moneyCard)) : h("p", {cls:"empty", text:"None match."}));
+  list.appendChild(h("h2", {cls:"sec", text:"Which kinds of game earn most per player"}));
+  list.appendChild(h("p", {cls:"section-intro", text:"Every game on the earning chart, grouped by Roblox's own sub-genre. A high number means games of this kind reach the chart with few players."}));
+  list.appendChild(M.types.length ? table([{t:"Kind"},{t:"On the chart",num:1},{t:"Made in " + M.young_days + " days",num:1},{t:"Typical players",num:1},{t:"Money per player",num:1},{t:"Best rank",num:1},{t:"Most per player"}],
+    M.types.map(function(t){
+      return h("tr", null, h("td", {text:t.name}), h("td", {cls:"num", text:String(t.n)}), h("td", {cls:"num", text:String(t.young)}),
+        h("td", {cls:"num", text:fmt(t.playing)}), h("td", {cls:"num", text:(t.multiple >= 10 ? Math.round(t.multiple) : t.multiple) + "×"}),
+        h("td", {cls:"num", text:"#" + t.best_pos}), h("td", {cls:"wrap"}, h("div", {cls:"chips"}, t.top.map(chip))));
+    })) : h("p", {cls:"empty", text:"Not enough games yet."}));
+  var all = M.all.filter(gameMatches), holder = h("div");
+  var btn = h("button", {cls:"more", type:"button", "aria-expanded":"false", text:"Show the whole earning chart (" + all.length + " games)"});
+  btn.addEventListener("click", function(){
+    var open = btn.getAttribute("aria-expanded") === "true";
+    holder.textContent = "";
+    if (!open) holder.appendChild(moneyTable(all));
+    btn.setAttribute("aria-expanded", String(!open));
+    btn.textContent = open ? "Show the whole earning chart (" + all.length + " games)" : "Hide the chart";
+  });
+  list.appendChild(btn); list.appendChild(holder);
+}
+
 var state = {tab:"jump", q:"", lineage:false};
 function waveMatches(w){
   if (state.lineage && !w.lineage) return false;
@@ -481,6 +593,7 @@ function gameMatches(g){
   return !state.q || g.name.toLowerCase().indexOf(state.q) >= 0;
 }
 function count(id){
+  if (id === "money") return M.young.filter(gameMatches).length;
   if (id === "lone") return D.lone.filter(gameMatches).length;
   if (id === "rising") return D.rising.filter(gameMatches).length;
   if (id === "charts") return D.charts.filter(gameMatches).length;
@@ -498,6 +611,7 @@ function renderTabs(){
   var nav = document.getElementById("tabs"); nav.textContent = "";
   TABS.forEach(function(s){
     if ((s.id === "fading" || s.id === "watching") && !D.waves.some(function(w){ return w.stage === s.id; })) return;
+    if (s.id === "money" && !M.all.length) return;
     nav.appendChild(h("button", {cls:"tab", type:"button", "aria-pressed":String(state.tab === s.id),
       on:{click:function(){ go(s.id); }}}, s.emoji + " " + s.name, h("span", {cls:"n", text:String(count(s.id))})));
   });
@@ -529,7 +643,9 @@ function render(){
   var s = TABS.find(function(x){ return x.id === state.tab; }) || TABS[0];
   document.getElementById("intro").textContent = s.intro;
   var list = document.getElementById("list"); list.textContent = "";
-  if (state.tab === "lone"){
+  if (state.tab === "money"){
+    renderMoney(list);
+  } else if (state.tab === "lone"){
     var lone = D.lone.filter(gameMatches);
     list.appendChild(lone.length ? h("div", {cls:"tiles"}, lone.map(loneTile)) : h("p", {cls:"empty", text:"Nothing here right now."}));
   } else if (state.tab === "rising"){
@@ -613,6 +729,12 @@ function footer(){
       h("li", {text:"Minutes per visit: average players online × 1,440 ÷ visits per day. Long can mean sticky, or lots of AFK."}),
       h("li", {text:"Progress badges show what share of players reached milestones; badges added in the last 3 weeks usually mean new updates or live events."}),
       h("li", {text:"Mechanics are detected from keywords in titles and descriptions, so they're rough."})),
+    h("h3", {text:"How the Money tab works"}),
+    h("ul", null,
+      h("li", {text:"Roblox's Top Earning chart lists games in order of what they earn, without amounts. The radar records each game's rank and players every check."}),
+      h("li", {text:"“Players usually needed at this rank” is the middle player count of the 7 games ranked either side. “× the usual money per player” is that number divided by the game's own players. It compares games; it isn't a Robux figure."}),
+      h("li", {text:"Stores (game passes and paid products with prices) are public and re-read weekly. Item kinds are guessed from item names, so they're rough. Prices don't show how many were sold."}),
+      h("li", {text:"A high rank with few players usually means a loyal audience that spends, a deep store, or both. It can also be a short burst (a sale or an event), so check “days on the chart”."})),
     h("p", {text:"Not available publicly: real retention, revenue, ad spend, play-through rate. Data comes from Roblox's public charts and search, checked every 3 hours; the radar only sees games that show up there. It tells you when a wave is open; the idea and the twist are still yours."})));
 }
 
